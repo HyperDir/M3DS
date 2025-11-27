@@ -1,0 +1,49 @@
+#pragma once
+
+#include <utility>
+#ifdef __3DS__
+#include <c3d/renderqueue.h>
+#endif
+
+#include <m3ds/utils/Input.hpp>
+#include <m3ds/utils/FrameTimer.hpp>
+
+namespace M3DS {
+    class DrawEnvironment {
+        friend class Root;
+
+        DrawEnvironment() noexcept {
+#ifdef __3DS__
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+#endif
+        }
+        ~DrawEnvironment() {
+#ifdef __3DS__
+            C3D_FrameEnd(0);
+#endif
+        }
+    };
+
+    class Frame {
+        friend class Root;
+
+        Frame() noexcept {
+#ifdef __3DS__
+            aptHandleSleep();
+            aptHandleJumpToHome();
+#endif
+
+            Input::update();
+        }
+
+        ~Frame() {
+            while (!Node::freeQueue.empty()) {
+                Node* node = Node::freeQueue.front();
+                Node::freeQueue.pop();
+
+                if (Node* parent = node->getParent())
+                    erase_if(parent->mChildren, [node](const std::unique_ptr<Node>& n) { return n.get() == node; });
+            }
+        }
+    };
+}

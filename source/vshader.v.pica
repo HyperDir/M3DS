@@ -1,0 +1,151 @@
+; Uniforms
+.fvec projection[4]
+.fvec modelView[3]
+.fvec bones[84] ; 28 bones, 4x3 matrix for each bone
+; .fvec unused[3]
+
+; Constants
+.constf myconst(0.0, 1.0, 0.5, 0)
+.alias zeros myconst.xxxx ; Vector full of zeros
+.alias ones  myconst.yyyy ; Vector full of ones
+.alias halfs myconst.zzzz ; Vector full of halves
+
+; Outputs
+.out outpos position
+.out outtc0 texcoord0
+.out outclr color
+.out outview view
+.out outnq normalquat
+
+; Inputs
+.alias inpos         v0
+.alias intex         v1
+.alias innrm         v2
+
+.alias inBoneIndex   v3 ; Bone indices as a vector
+.alias inBoneWeight  v4 ; Bone weights as a vector
+
+.alias totalPosition r15
+.alias localPosition r14
+.alias boneIndex     r13
+
+.alias normalAccum   r12
+.alias boneData      r11
+
+.alias currentBoneIndex boneData.xxxx
+.alias currentBoneWeight boneData.yyyy
+
+.proc handleBone
+    cmp zeros, eq, eq, currentBoneWeight.x
+    jmpc cmp.x, skipbone
+
+	mova a0.x, currentBoneIndex
+
+	dp4 localPosition.x, bones[a0.x + 0], r2
+	dp4 localPosition.y, bones[a0.x + 1], r2
+	dp4 localPosition.z, bones[a0.x + 2], r2
+
+	mul localPosition, localPosition, currentBoneWeight
+	add totalPosition, totalPosition, localPosition
+
+	; Normals
+	.alias tmp r3
+
+	dp3 tmp.x, bones[a0.x + 0], innrm
+	dp3 tmp.y, bones[a0.x + 1], innrm
+	dp3 tmp.z, bones[a0.x + 2], innrm
+
+	mul tmp.xyz, tmp.xyz, currentBoneWeight
+	add normalAccum.xyz, normalAccum.xyz, tmp.xyz
+skipbone:
+    nop
+.end
+
+.proc main
+    dp4 r14.x, inBoneWeight, inBoneWeight
+    cmp zeros, eq, ne, r14.x
+    jmpc cmp.y, bones
+nobones:
+    mov totalPosition, inpos
+    mov r14.xyz, innrm
+
+    jmpc cmp.x, afterbones
+bones:
+	add boneIndex, inBoneIndex, inBoneIndex
+	add boneIndex, boneIndex, inBoneIndex ; boneIndex = inBoneIndex * 3
+
+	mov r2, inpos
+	mov r2.w, ones ; make sure w = 1.0
+	mov totalPosition, zeros ; totalPosition = {0, 0, 0, 0}
+	mov normalAccum, zeros ; normalAccum = {0, 0, 0, 0}
+
+	mov currentBoneIndex, boneIndex.x
+	mov currentBoneWeight, inBoneWeight.x
+	call handleBone
+
+	mov currentBoneIndex, boneIndex.y
+	mov currentBoneWeight, inBoneWeight.y
+	call handleBone
+
+	mov currentBoneIndex, boneIndex.z
+	mov currentBoneWeight, inBoneWeight.z
+	call handleBone
+
+	mov currentBoneIndex, boneIndex.w
+	mov currentBoneWeight, inBoneWeight.w
+	call handleBone
+
+	; Normalize
+    dp3 r6.x, normalAccum, normalAccum
+    rsq r6.x, r6.x
+    mul r14.xyz, normalAccum, r6.x
+afterbones:
+    ; Rotate normal by modelView matrix
+    dp3 r7.x, modelView[0], r14
+    dp3 r7.y, modelView[1], r14
+    dp3 r7.z, modelView[2], r14
+
+    ; Normalize the transformed normal
+    dp3 r6.x, r7, r7
+    rsq r6.x, r6.x
+    mul r14.xyz, r7, r6.x
+
+    mov totalPosition.w, ones
+
+	; r1 = modelView * inpos
+	dp4 r1.x, modelView[0], totalPosition
+	dp4 r1.y, modelView[1], totalPosition
+	dp4 r1.z, modelView[2], totalPosition
+	dp4 r1.w, myconst.xxxy, totalPosition
+	; dp4 r1.w, modelView[3], totalPosition
+
+	; outview = -r1
+	mov outview, -r1
+
+	; outpos = projection * r1
+	dp4 outpos.x, projection[0], r1
+	dp4 outpos.y, projection[1], r1
+	dp4 outpos.z, projection[2], r1
+	dp4 outpos.w, projection[3], r1
+
+	; outtex = intex
+	mov outtc0, intex
+
+	mov r0, myconst.yxxx
+	add r4, ones, r14.z
+	mul r4, halfs, r4
+	cmp zeros, ge, ge, r4.x
+	rsq r4, r4.x
+	mul r5, halfs, r14
+	jmpc cmp.x, degenerate
+
+	rcp r0.z, r4.x
+	mul r0.xy, r5, r4
+
+degenerate:
+	mov outnq, r0
+	mov outclr, ones
+
+	; We're finished
+	end
+.end
