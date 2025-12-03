@@ -401,12 +401,30 @@ namespace M3DS {
 
     template <TrivialIOType T>
     bool BinaryFileAccessor::read(T& to) const noexcept {
-        return std::fread(&to, sizeof(T), 1, mFile) == 1;
+        // Sanitise booleans
+        if constexpr (std::same_as<T, bool>) {
+            std::uint8_t val {};
+            if (std::fread(&val, sizeof(val), 1, mFile) != 1)
+                return false;
+            to = static_cast<T>(val);
+            return true;
+        } else {
+            return std::fread(&to, sizeof(T), 1, mFile) == 1;
+        }
     }
 
     template <TrivialIOType T>
     bool BinaryFileAccessor::read(std::span<T> to) const noexcept {
-        return std::fread(to.data(), sizeof(T), to.size(), mFile) == to.size();
+        // Sanitise booleans
+        if constexpr (std::same_as<T, bool>) {
+            for (bool& val : to) {
+                if (!read(val))
+                    return false;
+            }
+            return true;
+        } else {
+            return std::fread(to.data(), sizeof(T), to.size(), mFile) == to.size();
+        }
     }
 
     template <TrivialIOType T>
@@ -421,12 +439,30 @@ namespace M3DS {
 
     template <TrivialIOType T>
     bool BinaryInFileAccessor::read(T& to) const noexcept {
-        return std::fread(&to, sizeof(T), 1, mFile) == 1;
+        // Sanitise booleans
+        if constexpr (std::same_as<T, bool>) {
+            std::uint8_t val {};
+            if (std::fread(&val, sizeof(val), 1, mFile) != 1)
+                return false;
+            to = static_cast<T>(val);
+            return true;
+        } else {
+            return std::fread(&to, sizeof(T), 1, mFile) == 1;
+        }
     }
 
     template <TrivialIOType T>
     bool BinaryInFileAccessor::read(std::span<T> to) const noexcept {
-        return std::fread(to.data(), sizeof(T), to.size(), mFile) == to.size();
+        // Sanitise booleans
+        if constexpr (std::same_as<T, bool>) {
+            for (bool& val : to) {
+                if (!read(val))
+                    return false;
+            }
+            return true;
+        } else {
+            return std::fread(to.data(), sizeof(T), to.size(), mFile) == to.size();
+        }
     }
 
     template <TrivialIOType T>

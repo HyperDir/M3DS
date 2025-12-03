@@ -39,7 +39,7 @@ namespace M3DS {
 /* Implementations */
 namespace M3DS {
     inline DVLB::DVLB(const std::span<unsigned char> shader) noexcept
-        : dvlb(DVLB_ParseFile(reinterpret_cast<const std::uint32_t*>(shader.data()), shader.size_bytes()))
+        : dvlb(DVLB_ParseFile(reinterpret_cast<std::uint32_t*>(shader.data()), shader.size_bytes()))
     {}
 
     inline DVLB::DVLB(const std::span<std::uint32_t> shader) noexcept
