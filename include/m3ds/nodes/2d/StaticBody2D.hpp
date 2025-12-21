@@ -7,9 +7,10 @@
 namespace M3DS {
     class StaticBody2D : public PhysicsBody2D {
         M_CLASS(StaticBody2D, PhysicsBody2D)
-    public:
-        StaticBody2D();
+    protected:
+        void afterTreeEnter() override;
+        void beforeTreeExit() override;
     private:
-        SPhys::StaticBody2D mSpecialisedObject {};
+        SPhys::Accessor<SPhys::StaticBody2D> mAccessor {};
     };
 }

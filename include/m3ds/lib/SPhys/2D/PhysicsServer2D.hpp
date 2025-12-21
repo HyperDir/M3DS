@@ -11,70 +11,81 @@
 
 #include "Intersections2D.hpp"
 
+#include "../Containers/Hive.hpp"
+#include "../Utils/Accessor.hpp"
+
 namespace SPhys {
     template <PhysicsEnvironment2D Environment = PhysicsEnvironment2D{}>
     class PhysicsServer2D {
-        std::vector<StaticBody2D*> mStaticBodies {};
-        std::vector<KinematicBody2D*> mKinematicBodies {};
-        std::vector<Area2D*> mAreas {};
+        Hive<StaticBody2D> mStaticBodyHive {};
+        Hive<KinematicBody2D> mKinematicBodyHive {};
+        Hive<Area2D> mAreaHive {};
 
         std::flat_set<const Area2D*> mRemovedAreas {};
+
+        std::unordered_map<Vector2i, std::vector<Area2D*>> mAreaSpatialHash {};
+        std::unordered_map<Vector2i, std::vector<PhysicsBody2D*>> mBodySpatialHash {};
     public:
-        [[nodiscard]] std::span<Area2D* const> getAreas() const noexcept;
-        [[nodiscard]] std::span<KinematicBody2D* const> getKinematicBodies() const noexcept;
-        [[nodiscard]] std::span<StaticBody2D* const> getStaticBodies() const noexcept;
+        constexpr Accessor<StaticBody2D> emplaceStaticBody();
+        constexpr Accessor<KinematicBody2D> emplaceKinematicBody();
+        constexpr Accessor<Area2D> emplaceArea();
 
-        constexpr void registerBody(StaticBody2D& body) noexcept;
-        constexpr void unregisterBody(const StaticBody2D& body) noexcept;
+        constexpr void eraseStaticBody(Accessor<StaticBody2D> iterator) noexcept;
+        constexpr void eraseKinematicBody(Accessor<KinematicBody2D> iterator) noexcept;
+        constexpr void eraseArea(Accessor<Area2D> iterator) noexcept;
 
-        constexpr void registerBody(KinematicBody2D& body) noexcept;
-        constexpr void unregisterBody(const KinematicBody2D& body) noexcept;
+        constexpr void updateAreas() noexcept;
+        constexpr void step(Seconds<float> delta) noexcept;
 
-        constexpr void registerArea(Area2D& area) noexcept;
-        constexpr void unregisterArea(const Area2D& area) noexcept;
-
-        void registerObject(CollisionObject2D& object) noexcept;
-        void unregisterObject(CollisionObject2D& object) noexcept;
-
-        void updateAreas() noexcept;
-        void step(Seconds<float> delta) noexcept;
+        constexpr const Hive<Area2D>& getAreas() const noexcept;
+        constexpr const Hive<KinematicBody2D>& getKinematicBodies() const noexcept;
+        constexpr const Hive<StaticBody2D>& getStaticBodies() const noexcept;
     };
+}
 
+
+
+/* Implementation */
+namespace SPhys {
     template <PhysicsEnvironment2D Environment>
-    void PhysicsServer2D<Environment>::registerObject(CollisionObject2D& object) noexcept {
-        const ObjectType2D type = object.getObjectType();
-        if (type == ObjectType2D::area)
-            registerArea(reinterpret_cast<Area2D&>(object));
-        else if (type == ObjectType2D::static_body)
-            registerBody(reinterpret_cast<StaticBody2D&>(object));
-        else if (type == ObjectType2D::kinematic_body)
-            registerBody(reinterpret_cast<KinematicBody2D&>(object));
-        else
-            std::cerr << std::format("Invalid object type: {}!", static_cast<std::uint32_t>(type)) << std::endl;
+    constexpr Accessor<StaticBody2D> PhysicsServer2D<Environment>::emplaceStaticBody() {
+        return Accessor{ mStaticBodyHive.insert() };
     }
 
     template <PhysicsEnvironment2D Environment>
-    void PhysicsServer2D<Environment>::unregisterObject(CollisionObject2D& object) noexcept {
-        const ObjectType2D type = object.getObjectType();
-        if (type == ObjectType2D::area)
-            unregisterArea(reinterpret_cast<Area2D&>(object));
-        else if (type == ObjectType2D::static_body)
-            unregisterBody(reinterpret_cast<StaticBody2D&>(object));
-        else if (type == ObjectType2D::kinematic_body)
-            unregisterBody(reinterpret_cast<KinematicBody2D&>(object));
-        else
-            std::cerr << std::format( "Invalid object type: {}!", static_cast<std::uint32_t>(type)) << std::endl;
+    constexpr Accessor<KinematicBody2D> PhysicsServer2D<Environment>::emplaceKinematicBody() {
+        return Accessor{ mKinematicBodyHive.insert() };
     }
 
     template <PhysicsEnvironment2D Environment>
-    void PhysicsServer2D<Environment>::updateAreas() noexcept {
-        std::unordered_map<Vector2i, std::vector<Area2D*>> spatialHash2D {};
+    constexpr Accessor<Area2D> PhysicsServer2D<Environment>::emplaceArea() {
+        return Accessor{ mAreaHive.insert() };
+    }
 
-        const auto forOverlappingCells = [&](const Area2D* area, auto&& func) {
-            const auto& [min, max] = area->getBoundingBox();
+    template <PhysicsEnvironment2D Environment>
+    constexpr void PhysicsServer2D<Environment>::eraseStaticBody(Accessor<StaticBody2D> iterator) noexcept {
+        mStaticBodyHive.erase(iterator.mIterator);
+    }
 
-            const Vector2i lower  { min / Environment.chunkSize };
-            const Vector2i higher { (max / Environment.chunkSize).ceil() };
+    template <PhysicsEnvironment2D Environment>
+    constexpr void PhysicsServer2D<Environment>::eraseKinematicBody(Accessor<KinematicBody2D> iterator) noexcept {
+        mKinematicBodyHive.erase(iterator.mIterator);
+    }
+
+    template <PhysicsEnvironment2D Environment>
+    constexpr void PhysicsServer2D<Environment>::eraseArea(Accessor<Area2D> iterator) noexcept {
+        mAreaHive.erase(iterator.mIterator);
+    }
+
+    template <PhysicsEnvironment2D Environment>
+    constexpr void PhysicsServer2D<Environment>::updateAreas() noexcept {
+        mAreaSpatialHash.clear();
+
+        const auto forOverlappingCells = [&](const Area2D& area, auto&& func) {
+            const auto& [min, max] = area.getBoundingBox();
+
+            const Vector2i lower  { (min / Environment.chunkSize).floor() };
+            const Vector2i higher { (max / Environment.chunkSize).floor() };
 
             Vector2i pos;
             for (pos.x = lower.x; pos.x <= higher.x; ++pos.x)
@@ -82,45 +93,45 @@ namespace SPhys {
                     func(pos);
         };
 
-        for (Area2D* area : mAreas) {
-            if (area->isDisabled()) {
-                std::erase_if(area->mOverlappingAreas, [&](const Area2D* other) {
+        for (Area2D& area : mAreaHive) {
+            if (area.isDisabled()) {
+                std::erase_if(area.mOverlappingAreas, [&](const Area2D* other) {
                     return mRemovedAreas.contains(other);
                 });
                 continue;
             }
 
-            std::erase_if(area->mOverlappingAreas, [&](Area2D* other) {
+            std::erase_if(area.mOverlappingAreas, [&](Area2D* other) {
                 if (mRemovedAreas.contains(other))
                     return true;
 
                 if (other->isDisabled()) {
-                    area->areaExited(other);
+                    if (area.areaExited) area.areaExited(other);
                     return true;
                 }
 
-                if (!(area->getMask() & other->getLayer())) {
-                    area->areaExited(other);
+                if (!(area.getMask() & other->getLayer())) {
+                    if (area.areaExited) area.areaExited(other);
                     return true;
                 }
 
                 const bool overlapping = (
-                    area->getBoundingBox().isOverlapping(other->getBoundingBox()) &&
+                    area.getBoundingBox().isOverlapping(other->getBoundingBox()) &&
                     std::visit(
                         [](const auto& lhs, const auto& rhs) -> bool {
                             return isIntersecting(lhs, rhs);
                         },
-                        area->getGlobalShape(),
+                        area.getGlobalShape(),
                         other->getGlobalShape()
                     )
                 );
 
                 if (!overlapping) {
-                    if (other->getMask() & area->getLayer() && std::erase(other->mOverlappingAreas, area)) {
-                        other->areaExited(area);
+                    if (other->getMask() & area.getLayer() && std::erase(other->mOverlappingAreas, &area)) {
+                        if (other->areaExited) other->areaExited(&area);
                     }
 
-                    area->areaExited(other);
+                    if (area.areaExited) area.areaExited(other);
                     return true;
                 }
 
@@ -128,28 +139,28 @@ namespace SPhys {
             });
 
             forOverlappingCells(area, [&](const Vector2i& cell) {
-                auto& cellAreas = spatialHash2D[cell];
+                auto& cellAreas = mAreaSpatialHash[cell];
 
                 for (Area2D* other : cellAreas) {
                     {
-                        const bool lhsContainsRhs = std::ranges::contains(area->mOverlappingAreas, other);
-                        const bool rhsContainsLhs = std::ranges::contains(other->mOverlappingAreas, area);
+                        const bool lhsContainsRhs = std::ranges::contains(area.mOverlappingAreas, other);
+                        const bool rhsContainsLhs = std::ranges::contains(other->mOverlappingAreas, &area);
 
                         if (lhsContainsRhs) {
                             if (
-                                other->getMask() & area->getLayer() &&
+                                other->getMask() & area.getLayer() &&
                                 !rhsContainsLhs
                             ) {
-                                other->mOverlappingAreas.emplace_back(area);
-                                other->areaEntered(area);
+                                other->mOverlappingAreas.emplace_back(&area);
+                                if (other->areaEntered) other->areaEntered(&area);
                             }
 
                             continue;
                         }
                         if (rhsContainsLhs) {
-                            if (area->getMask() & area->getLayer()) {
-                                area->mOverlappingAreas.emplace_back(other);
-                                area->areaEntered(other);
+                            if (area.getMask() & other->getLayer()) {
+                                area.mOverlappingAreas.emplace_back(other);
+                                if (other->areaEntered) area.areaEntered(other);
                             }
 
                             continue;
@@ -157,40 +168,40 @@ namespace SPhys {
                     }
 
                     if (
-                        area->getBoundingBox().isOverlapping(other->getBoundingBox()) &&
+                        area.getBoundingBox().isOverlapping(other->getBoundingBox()) &&
                         std::visit(
                             [](const auto& lhs, const auto& rhs) -> bool {
                                 return isIntersecting(lhs, rhs);
                             },
-                            area->getGlobalShape(),
+                            area.getGlobalShape(),
                             other->getGlobalShape()
                         )
                     ) {
-                        if (area->getMask() & other->getLayer()) {
-                            area->mOverlappingAreas.emplace_back(other);
-                            area->areaEntered(other);
+                        if (area.getMask() & other->getLayer()) {
+                            area.mOverlappingAreas.emplace_back(other);
+                            if (area.areaEntered) area.areaEntered(other);
                         }
-                        if (other->getMask() & area->getLayer()) {
-                            other->mOverlappingAreas.emplace_back(area);
-                            other->areaEntered(area);
+                        if (other->getMask() & area.getLayer()) {
+                            other->mOverlappingAreas.emplace_back(&area);
+                            if (area.areaEntered) other->areaEntered(&area);
                         }
                     }
                 }
 
-                cellAreas.push_back(area);
+                cellAreas.emplace_back(&area);
             });
         }
     }
 
     template <PhysicsEnvironment2D Environment>
-    void PhysicsServer2D<Environment>::step(const Seconds<float> delta) noexcept {
-        std::unordered_map<Vector2i, std::vector<PhysicsBody2D*>> spatialHash2D {};
+    constexpr void PhysicsServer2D<Environment>::step(const Seconds<float> delta) noexcept {
+        mBodySpatialHash.clear();
 
-        const auto forOverlappingCells = [&](const PhysicsBody2D* body, const Vector2& velocity, auto&& func) {
-            const auto [min, max] = body->getBoundingBox().expand(velocity * delta);
+        const auto forOverlappingCells = [&](const PhysicsBody2D& body, const Vector2& velocity, auto&& func) {
+            const auto [min, max] = body.getBoundingBox().expand(velocity * delta);
 
-            const Vector2i lower  { min / Environment.chunkSize };
-            const Vector2i higher { (max / Environment.chunkSize).ceil() };
+            const Vector2i lower  { (min / Environment.chunkSize).floor() };
+            const Vector2i higher { (max / Environment.chunkSize).floor() };
 
             Vector2i pos;
             for (pos.x = lower.x; pos.x <= higher.x; ++pos.x)
@@ -198,140 +209,122 @@ namespace SPhys {
                     func(pos);
         };
 
-        for (KinematicBody2D* body : mKinematicBodies) {
-            forOverlappingCells(body, body->getVelocity(), [&](const Vector2i& cell) {
-                spatialHash2D[cell].push_back(body);
-            });
+        for (StaticBody2D& body : mStaticBodyHive) {
+            forOverlappingCells(
+                body,
+                {},
+                [&](const Vector2i& cell) {
+                    mBodySpatialHash[cell].emplace_back(&body);
+                }
+            );
         }
 
-        for (StaticBody2D* body : mStaticBodies) {
-            forOverlappingCells(body, {}, [&](const Vector2i& cell) {
-                // Don't bother if no bodies are present in cell
-                if (const auto it = spatialHash2D.find(cell); it != spatialHash2D.end())
-                    it->second.push_back(body);
-            });
+        for (KinematicBody2D& body : mKinematicBodyHive) {
+            forOverlappingCells(
+                body,
+                body.getVelocity(),
+                [&](const Vector2i& cell) {
+                    // Don't bother if no bodies are present in cell
+                    if (const auto it = mBodySpatialHash.find(cell); it != mBodySpatialHash.end())
+                        it->second.emplace_back(&body);
+                }
+            );
         }
 
         std::vector<const PhysicsBody2D*> otherBodies {};
 
-        static constexpr std::uint_fast8_t subStepCount = 4;
-        const float subDelta = delta / subStepCount;
+        for (auto& body : mKinematicBodyHive) {
+            body.mOnGround = false;
+            otherBodies.clear();
 
-        for (auto* body : mKinematicBodies) {
-            body->mOnGround = false;
+            body.addTranslation(body.getVelocity() * delta);
 
-            for (std::uint_fast8_t i{}; i < subStepCount && body->getVelocity().lengthSquared() > 1e-9; ++i) {
-                body->setTranslation(body->getTranslation() + body->getVelocity() * subDelta);
+            // Slight bias toward the ground
+            // Hack to keep bodies grounded when moving down slopes
+            body.addTranslation(body.getUpDirection() * -Environment.groundBias * delta);
 
-                // Slight bias toward the ground
-                // Hack to keep bodies grounded when moving down slopes
-                // Causes extra acceleration momentarily when stepping off edge
-                body->setTranslation(body->getTranslation() + body->getUpDirection() * -2.f * subDelta);
+            forOverlappingCells(body, body.getVelocity(), [&](const Vector2i& cell) {
+                const auto it = mBodySpatialHash.find(cell);
+                if (it == mBodySpatialHash.end()) return;
 
-                otherBodies.clear();
-                forOverlappingCells(body, body->getVelocity(), [&](const Vector2i& cell) {
-                    const auto it = spatialHash2D.find(cell);
-                    if (it == spatialHash2D.end()) return;
-
-                    for (const PhysicsBody2D* other : it->second) {
-                        if (
-                            other != body &&
-                            body->getMask() & other->getLayer() &&
-                            !std::ranges::contains(otherBodies, other)
-                        ) {
-                            otherBodies.push_back(other);
-                        }
-                    }
-                });
-
-                static constexpr int depthLimit = 4;
-                bool resolvedAll = false;
-                for (int depth = 0; !resolvedAll && depth < depthLimit; ++depth) {
-                    resolvedAll = true;
-
-                    for (const PhysicsBody2D* other : otherBodies) {
-                        if (!body->getBoundingBox().isOverlapping(other->getBoundingBox())) {
-                            continue;
-                        }
-
-                        const std::optional<MTV2D> mtv = std::visit(
-                            [&](const ShapeType2D auto& lhs, const ShapeType2D auto& rhs) {
-                                return separatingAxisTest(lhs, rhs);
-                            },
-                            body->getGlobalShape<DirtyCheck::skip>(),
-                            other->getGlobalShape<DirtyCheck::skip>()
-                        );
-
-                        if (!mtv) continue;
-
-                        resolvedAll = false;
-
-                        const bool onGround = body->getUpDirection().dot(mtv->normal) > 0.8;
-                        body->mOnGround = body->mOnGround || onGround;
-
-                        if (onGround && !body->getSlideOnSlope()) {
-                            body->setTranslation(body->getTranslation() + body->getUpDirection() * mtv->get().dot(body->getUpDirection()));
-
-                            const Vector2 downSlope = -body->getUpDirection();
-                            const float dotProduct = body->getVelocity().dot(downSlope);
-                            if (dotProduct > 0)
-                                body->setVelocity(body->getVelocity() - downSlope * dotProduct);
-                        } else {
-                            body->setTranslation(body->getTranslation() + mtv->get());
-                            const float dotProduct = body->getVelocity().dot(mtv->normal);
-                            if (dotProduct < 0)
-                                body->setVelocity(body->getVelocity() - mtv->normal * dotProduct);
-                        }
-                        if (body->getVelocity().lengthSquared() < 1e-9) break;
+                for (const PhysicsBody2D* other : it->second) {
+                    if (
+                        other != &body &&
+                        body.getMask() & other->getLayer() &&
+                        !std::ranges::contains(otherBodies, other)
+                    ) {
+                        otherBodies.emplace_back(other);
                     }
                 }
+            });
+
+            static constexpr int depthLimit = 4;
+            bool resolvedAll = false;
+
+            Vector2 aggregateNormal {};
+
+            for (int depth = 0; !resolvedAll && depth < depthLimit; ++depth) {
+                resolvedAll = true;
+
+                for (const PhysicsBody2D* other : otherBodies) {
+                    if (!body.getBoundingBox().isOverlapping(other->getBoundingBox())) {
+                        continue;
+                    }
+
+                    const std::optional<MTV2D> mtv = std::visit(
+                        [&](const ShapeType2D auto& lhs, const ShapeType2D auto& rhs) {
+                            return separatingAxisTest(lhs, rhs);
+                        },
+                        body.getGlobalShape<DirtyCheck::perform>(),
+                        other->getGlobalShape<DirtyCheck::skip>()
+                    );
+
+                    if (!mtv) continue;
+
+                    resolvedAll = false;
+
+                    const Vector2 normal = mtv->normal;
+                    const Vector2 separation = mtv->get();
+
+                    aggregateNormal += normal;
+
+                    const bool isFloor = body.getUpDirection().dot(normal) > 0.6;
+
+                    body.mOnGround = body.mOnGround || isFloor;
+
+                    if (isFloor && !body.getSlideOnSlope()) {
+                        const float verticalPush = separation.dot(body.getUpDirection());
+                        body.addTranslation(body.getUpDirection() * verticalPush);
+                    } else {
+                        body.addTranslation(separation);
+                    }
+
+                    const float normalVel = body.getVelocity().dot(normal);
+
+                    if (normalVel < 0)
+                        body.setVelocity(body.getVelocity() - normal * normalVel);
+                }
+            }
+
+            if (aggregateNormal.lengthSquared() > 1e-9) {
+                if (body.getUpDirection().dot(aggregateNormal.normalise()) > 0.6)
+                    body.mOnGround = true;
             }
         }
     }
 
     template <PhysicsEnvironment2D Environment>
-    std::span<Area2D* const> PhysicsServer2D<Environment>::getAreas() const noexcept {
-        return mAreas;
+    constexpr const Hive<Area2D>& PhysicsServer2D<Environment>::getAreas() const noexcept {
+        return mAreaHive;
     }
 
     template <PhysicsEnvironment2D Environment>
-    std::span<KinematicBody2D* const> PhysicsServer2D<Environment>::getKinematicBodies() const noexcept {
-        return mKinematicBodies;
+    constexpr const Hive<KinematicBody2D>& PhysicsServer2D<Environment>::getKinematicBodies() const noexcept {
+        return mKinematicBodyHive;
     }
 
     template <PhysicsEnvironment2D Environment>
-    std::span<StaticBody2D* const> PhysicsServer2D<Environment>::getStaticBodies() const noexcept {
-        return mStaticBodies;
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::registerBody(StaticBody2D& body) noexcept {
-        mStaticBodies.emplace_back(&body);
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::unregisterBody(const StaticBody2D& body) noexcept {
-        std::erase(mStaticBodies, &body);
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::registerBody(KinematicBody2D& body) noexcept {
-        mKinematicBodies.emplace_back(&body);
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::unregisterBody(const KinematicBody2D& body) noexcept {
-        std::erase(mKinematicBodies, &body);
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::registerArea(Area2D& area) noexcept {
-        mAreas.emplace_back(&area);
-    }
-
-    template <PhysicsEnvironment2D Environment>
-    constexpr void PhysicsServer2D<Environment>::unregisterArea(const Area2D& area) noexcept {
-        mRemovedAreas.emplace(&area);
-        std::erase(mAreas, &area);
+    constexpr const Hive<StaticBody2D>& PhysicsServer2D<Environment>::getStaticBodies() const noexcept {
+        return mStaticBodyHive;
     }
 }

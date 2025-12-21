@@ -2,8 +2,7 @@
 
 #include <m3ds/nodes/2d/Node2D.hpp>
 
-#include <m3ds/lib/SPhys/2d/Shape2D.hpp>
-#include <m3ds/lib/SPhys/2d/CollisionObjects/CollisionObject2D.hpp>
+#include "m3ds/lib/SPhys/2D/PhysicsServer2D.hpp"
 
 namespace M3DS {
     class CollisionObject2D : public Node2D {
@@ -13,7 +12,7 @@ namespace M3DS {
         void setLayer(std::uint32_t layer) noexcept;
         void setMask(std::uint32_t mask) noexcept;
 
-        void setShape(SPhys::Shape2D shape) noexcept;
+        void setShape(const SPhys::Shape2D& shape) noexcept;
 
         void enableCollision() noexcept;
         void disableCollision() noexcept;
@@ -27,19 +26,24 @@ namespace M3DS {
 
         [[nodiscard]] SPhys::CollisionObject2D* getCollisionObject() noexcept;
         [[nodiscard]] const SPhys::CollisionObject2D* getCollisionObject() const noexcept;
+
+        void readback() noexcept;
     protected:
         void update(Seconds<float> delta) override;
 
-        explicit CollisionObject2D(SPhys::CollisionObject2D* collisionObject) noexcept;
+        void updateCollisionObject(SPhys::CollisionObject2D* obj) noexcept {
+            mCollisionObject = obj;
+        }
 
-        void afterTreeEnter() override;
-        void beforeTreeExit() override;
-
-        void readback() noexcept;
+        virtual void internaliseState() noexcept;
+        virtual void externaliseState() noexcept;
     private:
         SPhys::CollisionObject2D* mCollisionObject {};
-    };
 
-    [[nodiscard]] Error serialiseCollisionShape(const SPhys::Shape2D& shape, BinaryOutFileAccessor file) noexcept;
-    [[nodiscard]] Error deserialiseCollisionShape(SPhys::Shape2D& shape, BinaryInFileAccessor file) noexcept;
+        std::uint32_t mLayer = 0b1;
+        std::uint32_t mMask = 0b1;
+
+        SPhys::Shape2D mShape {};
+        bool mCollisionDisabled {};
+    };
 }

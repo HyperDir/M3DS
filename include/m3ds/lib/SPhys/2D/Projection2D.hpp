@@ -2,18 +2,18 @@
 
 #include <cmath>
 
-#include "../../Spatial/Units.hpp"
+#include "../Spatial/Units.hpp"
 
 namespace SPhys {
     struct Projection2D {
         Pixels<float> from {};
         Pixels<float> to {};
 
-        [[nodiscard]] constexpr float getOverlap(const Projection2D& with) const noexcept;
+        [[nodiscard]] constexpr Pixels<float> getOverlap(const Projection2D& with) const noexcept;
         [[nodiscard]] constexpr bool contains(const Projection2D& other) const noexcept;
     };
 
-    constexpr float Projection2D::getOverlap(const Projection2D& with) const noexcept {
+    constexpr Pixels<float> Projection2D::getOverlap(const Projection2D& with) const noexcept {
         return std::min(to, with.to) - std::max(from, with.from);
     }
 

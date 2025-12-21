@@ -2,8 +2,7 @@
 
 #include <m3ds/nodes/3d/Node3D.hpp>
 
-#include <m3ds/lib/SPhys/3D/Shape3D.hpp>
-#include <m3ds/lib/SPhys/3D/CollisionObjects/CollisionObject3D.hpp>
+#include "m3ds/lib/SPhys/3D/PhysicsServer3D.hpp"
 
 namespace M3DS {
     class CollisionObject3D : public Node3D {
@@ -13,7 +12,7 @@ namespace M3DS {
         void setLayer(std::uint32_t layer) noexcept;
         void setMask(std::uint32_t mask) noexcept;
 
-        void setShape(SPhys::Shape3D shape) noexcept;
+        void setShape(const SPhys::Shape3D& shape) noexcept;
 
         void enableCollision() noexcept;
         void disableCollision() noexcept;
@@ -27,16 +26,24 @@ namespace M3DS {
 
         [[nodiscard]] SPhys::CollisionObject3D* getCollisionObject() noexcept;
         [[nodiscard]] const SPhys::CollisionObject3D* getCollisionObject() const noexcept;
+
+        void readback() noexcept;
     protected:
         void update(Seconds<float> delta) override;
 
-        explicit CollisionObject3D(SPhys::CollisionObject3D* collisionObject) noexcept;
+        void updateCollisionObject(SPhys::CollisionObject3D* obj) noexcept {
+            mCollisionObject = obj;
+        }
 
-        void afterTreeEnter() override;
-        void beforeTreeExit() override;
-
-        void readback() noexcept;
+        virtual void internaliseState() noexcept;
+        virtual void externaliseState() noexcept;
     private:
         SPhys::CollisionObject3D* mCollisionObject {};
+
+        std::uint32_t mLayer = 0b1;
+        std::uint32_t mMask = 0b1;
+
+        SPhys::Shape3D mShape {};
+        bool mCollisionDisabled {};
     };
 }

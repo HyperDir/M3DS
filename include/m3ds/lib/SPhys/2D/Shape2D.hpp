@@ -20,8 +20,8 @@ namespace SPhys {
 
     template <typename T>
     concept RotatingShapeType2D = ShapeType2D<T> && requires(T a, float f) {
-        { a.rotate(f) } -> std::same_as<float>;
-        { a.setRotation(f) } -> std::same_as<float>;
+        { a.rotate(f) } -> std::same_as<void>;
+        { a.setRotation(f) } -> std::same_as<void>;
         { a.getRotation() } -> std::convertible_to<float>;
     };
 

@@ -117,6 +117,7 @@ namespace M3DS {
             }
         }
     }
+
     REGISTER_METHODS(
         Node3D,
 

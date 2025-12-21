@@ -1,51 +1,80 @@
 #include <m3ds/nodes/3d/KinematicBody3D.hpp>
 
-namespace M3DS {
-    KinematicBody3D::KinematicBody3D()
-        : PhysicsBody3D(&mSpecialisedObject)
-    {
-        mSpecialisedObject.userData = this;
-    }
+#include "m3ds/nodes/Viewport.hpp"
 
+namespace M3DS {
     void KinematicBody3D::setVelocity(const Vector3& to) noexcept {
-        mSpecialisedObject.setVelocity(to);
+        mAccessor->setVelocity(to);
     }
 
     void KinematicBody3D::setUpDirection(const Vector3& to) noexcept {
-        mSpecialisedObject.setUpDirection(to);
+        mAccessor->setUpDirection(to);
     }
 
     void KinematicBody3D::setSlideOnSlope(const bool to) noexcept {
-        mSpecialisedObject.setSlideOnSlope(to);
+        mAccessor->setSlideOnSlope(to);
     }
 
     const MetresPerSecond<Vector3>& KinematicBody3D::getVelocity() const noexcept {
-        return mSpecialisedObject.getVelocity();
+        return mAccessor->getVelocity();
     }
 
     const Vector3& KinematicBody3D::getUpDirection() const noexcept {
-        return mSpecialisedObject.getUpDirection();
+        return mAccessor->getUpDirection();
     }
 
     bool KinematicBody3D::getSlideOnSlope() const noexcept {
-        return mSpecialisedObject.getSlideOnSlope();
+        return mAccessor->getSlideOnSlope();
     }
 
     bool KinematicBody3D::isOnGround() const noexcept {
-        return mSpecialisedObject.isOnGround();
+        return mAccessor->isOnGround();
     }
 
-    struct SerialisationData {
-        Vector3 velocity;
-        Vector3 upDirection;
-        bool slideOnSlope;
-    };
+    void KinematicBody3D::afterTreeEnter() {
+        PhysicsBody3D::afterTreeEnter();
+
+        mAccessor = getViewport()->getPhysicsServer3d().emplaceKinematicBody();
+        mAccessor->userData = this;
+
+        updateCollisionObject(mAccessor.get());
+        externaliseState();
+
+        mAccessor->setSlideOnSlope(mSerialisationData.slideOnSlope);
+        mAccessor->setUpDirection(mSerialisationData.upDirection);
+    }
+
+    void KinematicBody3D::beforeTreeExit() {
+        PhysicsBody3D::beforeTreeExit();
+
+        internaliseState();
+
+        getViewport()->getPhysicsServer3d().eraseKinematicBody(mAccessor);
+        mAccessor = {};
+        updateCollisionObject(nullptr);
+    }
+
+    void KinematicBody3D::internaliseState() noexcept {
+        PhysicsBody3D::internaliseState();
+
+        mSerialisationData.velocity = getVelocity();
+        mSerialisationData.upDirection = getUpDirection();
+        mSerialisationData.slideOnSlope = getSlideOnSlope();
+    }
+
+    void KinematicBody3D::externaliseState() noexcept {
+        PhysicsBody3D::externaliseState();
+
+        setVelocity(mSerialisationData.velocity);
+        setUpDirection(mSerialisationData.upDirection);
+        setSlideOnSlope(mSerialisationData.slideOnSlope);
+    }
 
     Error KinematicBody3D::serialise(const BinaryOutFileAccessor file) const noexcept {
         if (const Error error = PhysicsBody3D::serialise(file); error != Error::none)
             return error;
 
-        const SerialisationData data {
+        const InternalData data {
             getVelocity(),
             getUpDirection(),
             getSlideOnSlope(),
@@ -61,7 +90,7 @@ namespace M3DS {
         if (const Error error = PhysicsBody3D::deserialise(file); error != Error::none)
             return error;
 
-        SerialisationData data;
+        InternalData data;
         if (!file.read(data))
             return Error::file_read_fail;
 
@@ -74,6 +103,7 @@ namespace M3DS {
 
     REGISTER_METHODS(
         KinematicBody3D,
+
         MUTABLE_METHOD(setVelocity),
         MUTABLE_METHOD(setUpDirection),
         MUTABLE_METHOD(setSlideOnSlope),
@@ -85,6 +115,7 @@ namespace M3DS {
 
     REGISTER_MEMBERS(
         KinematicBody3D,
+
         bindMember("velocity", &KinematicBody3D::getVelocity, &KinematicBody3D::setVelocity),
         bindMember("upDirection", &KinematicBody3D::getUpDirection, &KinematicBody3D::setUpDirection),
         bindMember("slideOnSlope", &KinematicBody3D::getSlideOnSlope, &KinematicBody3D::setSlideOnSlope),

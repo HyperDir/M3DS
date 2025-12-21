@@ -4,6 +4,7 @@
 
 namespace SPhys {
     struct PhysicsEnvironment3D {
-        Metres<float> chunkSize = 16;
+        Metres<float> chunkSize = 16.f;
+        Metres<float> groundBias = .2f;
     };
 }

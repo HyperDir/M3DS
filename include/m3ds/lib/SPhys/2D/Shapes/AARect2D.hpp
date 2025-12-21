@@ -3,7 +3,7 @@
 #include "../../Spatial/Units.hpp"
 #include "../../Spatial/Vector2.hpp"
 
-#include "Projection2D.hpp"
+#include "../Projection2D.hpp"
 #include "BoundingBox2D.hpp"
 
 namespace SPhys {

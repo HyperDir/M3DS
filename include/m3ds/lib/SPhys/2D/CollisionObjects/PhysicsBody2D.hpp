@@ -5,14 +5,13 @@
 namespace SPhys {
     class PhysicsBody2D : public CollisionObject2D {
     public:
-        explicit constexpr PhysicsBody2D(
-            const Pixels<Vector2>& translation,
-            float rotation,
-            const Shape2D& shape
-        ) noexcept;
+        explicit constexpr PhysicsBody2D(ObjectType2D objectType) noexcept;
     };
+}
 
-    constexpr PhysicsBody2D::PhysicsBody2D(const Pixels<Vector2>& translation, const float rotation, const Shape2D& shape) noexcept
-        : CollisionObject2D(translation, rotation, shape)
-    {}
+
+
+/* Implementation */
+namespace SPhys {
+    constexpr PhysicsBody2D::PhysicsBody2D(const ObjectType2D objectType) noexcept : CollisionObject2D(objectType) {}
 }

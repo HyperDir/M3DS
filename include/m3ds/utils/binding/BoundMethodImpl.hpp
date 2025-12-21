@@ -19,7 +19,7 @@ namespace M3DS {
 
     template <bool IsConst>
     template <std::size_t N>
-    constexpr GenericMethod<IsConst>::GenericMethod(const char(& name)[N]) noexcept : mName(name) {}
+    consteval GenericMethod<IsConst>::GenericMethod(const char(& name)[N]) noexcept : mName(name) {}
 
     template <bool IsConst>
     constexpr std::string_view GenericMethod<IsConst>::getName() const noexcept {
@@ -62,7 +62,7 @@ namespace M3DS {
 
     template <bool IsConst, BindableType ReturnType, BindableType... Args>
     template <std::size_t N>
-    constexpr Method<IsConst, ReturnType, Args...>::Method(const char(& name)[N]) noexcept
+    consteval Method<IsConst, ReturnType, Args...>::Method(const char(& name)[N]) noexcept
         : GenericMethod<IsConst>(name)
     {}
 
@@ -115,7 +115,7 @@ namespace M3DS {
 
     template <typename ClassType, typename ReturnType, typename... Args>
     template <std::size_t N>
-    constexpr ConstSpecialisedMethod<ClassType, ReturnType, Args...>::ConstSpecialisedMethod(
+    consteval ConstSpecialisedMethod<ClassType, ReturnType, Args...>::ConstSpecialisedMethod(
         const char (&name)[N],
         const MethodType method
     ) noexcept
@@ -143,7 +143,7 @@ namespace M3DS {
 
     template <typename ClassType, typename ReturnType, typename... Args>
     template <std::size_t N>
-    constexpr MutableSpecialisedMethod<ClassType, ReturnType, Args...>::MutableSpecialisedMethod(
+    consteval MutableSpecialisedMethod<ClassType, ReturnType, Args...>::MutableSpecialisedMethod(
         const char (&name)[N],
         const MethodType method
     ) noexcept
@@ -171,7 +171,7 @@ namespace M3DS {
 
     template <typename ClassType, typename ReturnType, typename... Args>
     template <std::size_t N>
-    constexpr MutableWrapperForConstSpecialisedMethod<ClassType, ReturnType, Args...>::MutableWrapperForConstSpecialisedMethod(
+    consteval MutableWrapperForConstSpecialisedMethod<ClassType, ReturnType, Args...>::MutableWrapperForConstSpecialisedMethod(
         const char (&name)[N],
         const MethodType method
     ) noexcept

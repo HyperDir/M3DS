@@ -8,8 +8,6 @@ namespace M3DS {
     class KinematicBody2D : public PhysicsBody2D {
         M_CLASS(KinematicBody2D, PhysicsBody2D)
     public:
-        explicit KinematicBody2D();
-
         void setVelocity(const PixelsPerSecond<Vector2>& to) noexcept;
         void setUpDirection(const Vector2& to) noexcept;
         void setSlideOnSlope(bool to) noexcept;
@@ -19,7 +17,19 @@ namespace M3DS {
         [[nodiscard]] bool getSlideOnSlope() const noexcept;
 
         [[nodiscard]] bool isOnGround() const noexcept;
+    protected:
+        void afterTreeEnter() override;
+        void beforeTreeExit() override;
+
+        void internaliseState() noexcept override;
+        void externaliseState() noexcept override;
     private:
-        SPhys::KinematicBody2D mSpecialisedObject {};
+        SPhys::Accessor<SPhys::KinematicBody2D> mAccessor {};
+
+        struct InternalData {
+            Vector2 velocity {};
+            Vector2 upDirection {0.f, 1.f};
+            bool slideOnSlope {};
+        } mSerialisationData {};
     };
 }

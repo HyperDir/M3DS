@@ -1,12 +1,11 @@
 #pragma once
 
 #include "../Shape2D.hpp"
-#include "../../Spatial/Units.hpp"
-#include "../../Spatial/Vector2.hpp"
-
 #include "../PhysicsEnvironment2D.hpp"
 
 #include "../../Utils/DirtyCheck.hpp"
+#include "../../Spatial/Units.hpp"
+#include "../../Spatial/Vector2.hpp"
 
 namespace SPhys {
     enum class ObjectType2D : std::uint8_t {
@@ -22,11 +21,7 @@ namespace SPhys {
     public:
         void* userData {};
 
-        explicit constexpr CollisionObject2D(
-            const Pixels<Vector2>& translation,
-            float rotation,
-            const Shape2D& shape
-        ) noexcept;
+        explicit constexpr CollisionObject2D(ObjectType2D objectType) noexcept;
 
         constexpr void setTranslation(const Pixels<Vector2>& to) noexcept;
         constexpr void setRotation(float to) noexcept;
@@ -59,9 +54,14 @@ namespace SPhys {
         [[nodiscard]] constexpr bool isDisabled() const noexcept;
 
         [[nodiscard]] constexpr ObjectType2D getObjectType() const noexcept;
-    protected:
-        ObjectType2D mObjectType = ObjectType2D::object;
     private:
+        ObjectType2D mObjectType = ObjectType2D::object;
+
+        bool mDisabled {};
+        mutable bool mIsClean {};
+
+        /* 1 byte padding */
+
         Pixels<Vector2> mTranslation {};
         float mRotation {};
 
@@ -71,20 +71,14 @@ namespace SPhys {
 
         std::uint32_t mLayer = 0b1;
         std::uint32_t mMask = 0b1;
-
-        bool mDisabled = false;
-        mutable bool mDirty = true;
     };
+}
 
-    constexpr CollisionObject2D::CollisionObject2D(
-        const Pixels<Vector2>& translation,
-        float rotation,
-        const Shape2D& shape
-    ) noexcept
-        : mTranslation(translation)
-        , mRotation(rotation)
-        , mLocalShape(shape)
-    {}
+
+
+/* Implementation */
+namespace SPhys {
+    constexpr CollisionObject2D::CollisionObject2D(const ObjectType2D objectType) noexcept : mObjectType(objectType) {}
 
     constexpr void CollisionObject2D::setTranslation(const Pixels<Vector2>& to) noexcept {
         if (to != mTranslation) {
@@ -92,18 +86,18 @@ namespace SPhys {
             if consteval {
                 updateGlobalShape();
             } else {
-                mDirty = true;
+                mIsClean = false;
             }
         }
     }
 
-    constexpr void CollisionObject2D::setRotation(float to) noexcept {
+    constexpr void CollisionObject2D::setRotation(const float to) noexcept {
         if (to != mRotation) {
             mRotation = to;
             if consteval {
                 updateGlobalShape();
             } else {
-                mDirty = true;
+                mIsClean = false;
             }
         }
     }
@@ -120,7 +114,7 @@ namespace SPhys {
         setTranslation(getTranslation() + amount);
     }
 
-    constexpr void CollisionObject2D::addRotation(float amount) noexcept {
+    constexpr void CollisionObject2D::addRotation(const float amount) noexcept {
         setRotation(mRotation + amount);
     }
 
@@ -129,16 +123,15 @@ namespace SPhys {
         if consteval {
             updateGlobalShape();
         } else {
-            mDirty = true;
+            mIsClean = false;
         }
     }
 
     constexpr void CollisionObject2D::updateGlobalShape() const noexcept {
-        if (mDirty || std::is_constant_evaluated()) {
+        if (!mIsClean || std::is_constant_evaluated()) {
             mLocalShape.visit(
                 [&]<typename T>(const T& shape) {
-                    mGlobalShape = shape;
-                    T& newShape = std::get<T>(mGlobalShape);
+                    T& newShape = mGlobalShape.emplace<T>(shape);
                     newShape.setTranslation(newShape.getTranslation().rotated(mRotation) + mTranslation);
                     if constexpr (RotatingShapeType2D<T>)
                         newShape.rotate(mRotation);
@@ -146,7 +139,7 @@ namespace SPhys {
                 }
             );
             if !consteval {
-                mDirty = false;
+                mIsClean = true;
             }
         }
     }

@@ -123,7 +123,7 @@ using SuperType = m_inherits;                                                   
 }                                                                                                               \
 [[nodiscard]] static constexpr bool inheritsFromHash(const std::size_t fromClassHash) noexcept {                \
     if (M3DS::fnv1a_hash(getClassStatic()) == fromClassHash) return true;                                       \
-    return inheritsFromHash(fromClassHash);                                                                     \
+    return SuperType::inheritsFromHash(fromClassHash);                                                          \
 }                                                                                                               \
 [[nodiscard]] bool inheritsFromHashVirtual(const std::size_t fromClassHash) const noexcept override {           \
     return inheritsFromHash(fromClassHash);                                                                     \

@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <cmath>
+#include <algorithm>
 
 namespace SPhys {
     template <typename T>
@@ -10,6 +11,13 @@ namespace SPhys {
     template <Arithmetic T>
     [[nodiscard]] constexpr T lerp(const T from, const T to, const float progress) noexcept {
         return from + (to - from) * progress;
+    }
+
+    template <Arithmetic T>
+    [[nodiscard]] constexpr T moveTowards(const T from, const T to, const float by) noexcept {
+        if (from < to)
+            return std::clamp(from + by, from, to);
+        return std::clamp(from - by, to, from);
     }
 
     [[nodiscard]] constexpr auto efficientDistanceApproximation(std::floating_point auto from, std::floating_point auto to) noexcept {

@@ -3,9 +3,11 @@
 #include "../../Spatial/Units.hpp"
 #include "../../Spatial/Vector2.hpp"
 
-#include "Projection2D.hpp"
+#include "../Projection2D.hpp"
+#include "BoundingBox2D.hpp"
 
 namespace SPhys {
+
     struct Rect2D {
         Pixels<Vector2> origin {};
         Radians<float> rotation {}; // Maybe rotation should cache sin and cos? can have overloaded operator=(float)
@@ -23,6 +25,7 @@ namespace SPhys {
         [[nodiscard]] constexpr Vector2 getSurfaceNormal(const Vector2& point) const noexcept;
         
         [[nodiscard]] constexpr Projection2D project(const Vector2& axis) const noexcept;
+
         [[nodiscard]] constexpr std::array<Vector2, 2> getSeparationAxes() const noexcept;
         [[nodiscard]] constexpr Vector2 getClosestPoint(const Vector2& to) const noexcept;
 

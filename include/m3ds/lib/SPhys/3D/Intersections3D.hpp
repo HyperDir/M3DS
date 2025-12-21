@@ -71,7 +71,7 @@ namespace SPhys {
         const ShapeType3D auto& lhs,
         const ShapeType3D auto& rhs
     ) noexcept {
-        // https://dyn4j.org/3010/01/sat/
+        // https://dyn4j.org/3010/01/
         float minOverlap = 1e10f;
         const Vector3* smallestAxis {};
 

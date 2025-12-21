@@ -22,11 +22,7 @@ namespace SPhys {
     public:
         void* userData {};
 
-        explicit constexpr CollisionObject3D(
-            const Metres<Vector3>& translation,
-            const Quaternion& rotation,
-            const Shape3D& shape
-        ) noexcept;
+        explicit constexpr CollisionObject3D(ObjectType3D objectType) noexcept;
 
         constexpr void setTranslation(const Metres<Vector3>& to) noexcept;
         constexpr void setRotation(const Quaternion& to) noexcept;
@@ -76,15 +72,7 @@ namespace SPhys {
         mutable bool mDirty = true;
     };
 
-    constexpr CollisionObject3D::CollisionObject3D(
-        const Metres<Vector3>& translation,
-        const Quaternion& rotation,
-        const Shape3D& shape
-    ) noexcept
-        : mTranslation(translation)
-        , mRotation(rotation)
-        , mLocalShape(shape)
-    {}
+    constexpr CollisionObject3D::CollisionObject3D(const ObjectType3D objectType) noexcept : mObjectType(objectType) {}
 
     constexpr void CollisionObject3D::setTranslation(const Metres<Vector3>& to) noexcept {
         if (to != mTranslation) {
@@ -137,8 +125,7 @@ namespace SPhys {
         if (mDirty || std::is_constant_evaluated()) {
             mLocalShape.visit(
                 [&]<typename T>(const T& shape) {
-                    mGlobalShape = shape;
-                    T& newShape = std::get<T>(mGlobalShape);
+                    T& newShape = mGlobalShape.emplace<T>(shape);
                     newShape.setTranslation(newShape.getTranslation().rotated(mRotation) + mTranslation);
                     if constexpr (RotatingShapeType3D<T>)
                         newShape.rotate(mRotation);

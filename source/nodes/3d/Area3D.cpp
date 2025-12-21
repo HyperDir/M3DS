@@ -1,21 +1,38 @@
 #include <m3ds/nodes/3d/Area3D.hpp>
 
-namespace M3DS {
-    Area3D::Area3D()
-        : CollisionObject3D(&mSpecialisedObject)
-    {
-        mSpecialisedObject.areaEntered = [this](const SPhys::Area3D* area) {
-            areaEntered.emit(this, static_cast<Area3D*>(area->userData));
-        };
-        mSpecialisedObject.areaExited = [this](const SPhys::Area3D* area) {
-            areaExited.emit(this, static_cast<Area3D*>(area->userData));
-        };
+#include "m3ds/nodes/Viewport.hpp"
 
-        mSpecialisedObject.userData = this;
+namespace M3DS {
+    bool Area3D::isOverlapping(const Area3D* other) const noexcept {
+        return mAccessor->isOverlapping(&*other->mAccessor);
     }
 
-    bool Area3D::isOverlapping(const Area3D* other) const noexcept {
-        return mSpecialisedObject.isOverlapping(&other->mSpecialisedObject);
+    void Area3D::afterTreeEnter() {
+        CollisionObject3D::afterTreeEnter();
+
+        mAccessor = getViewport()->getPhysicsServer3d().emplaceArea();
+        mAccessor->userData = this;
+
+        mAccessor->areaEntered = [this](const SPhys::Area3D* other) {
+            areaEntered.emit(this, static_cast<Area3D*>(other->userData));
+        };
+
+        mAccessor->areaExited = [this](const SPhys::Area3D* other) {
+            areaExited.emit(this, static_cast<Area3D*>(other->userData));
+        };
+
+        updateCollisionObject(mAccessor.get());
+        externaliseState();
+    }
+
+    void Area3D::beforeTreeExit() {
+        CollisionObject3D::beforeTreeExit();
+
+        internaliseState();
+
+        getViewport()->getPhysicsServer3d().eraseArea(mAccessor);
+        mAccessor = {};
+        updateCollisionObject(nullptr);
     }
 
     Error Area3D::serialise(const BinaryOutFileAccessor file) const noexcept {
@@ -46,6 +63,7 @@ namespace M3DS {
 
     REGISTER_METHODS(
         Area3D,
+
         CONST_METHOD(isOverlapping)
     );
 

@@ -1,34 +1,21 @@
 #pragma once
 
-#include <functional>
 #include <vector>
+#include <algorithm>
+#include <memory>
 
 #include "CollisionObject2D.hpp"
+
+#include "../../Containers/MoveOnlySmallFunction.hpp"
 
 namespace SPhys {
     class Area2D : public CollisionObject2D {
         template <PhysicsEnvironment2D> friend class PhysicsServer2D;
     public:
-        std::function<void(Area2D*)> areaEntered = [this](const Area2D* other) {
-            std::cout << std::format(
-                "Area2D {} entered Area {}",
-                static_cast<const void*>(this),
-                static_cast<const void*>(other)
-            ) << std::endl;
-        };
-        std::function<void(Area2D*)> areaExited = [this](const Area2D* other) {
-            std::cout << std::format(
-                "Area2D {} exited Area {}",
-                static_cast<const void*>(this),
-                static_cast<const void*>(other)
-            ) << std::endl;
-        };
+        MoveOnlySmallFunction<void(Area2D*)> areaEntered {};
+        MoveOnlySmallFunction<void(Area2D*)> areaExited {};
 
-        explicit constexpr Area2D(
-            const Pixels<Vector2>& translation = {},
-            float rotation = {},
-            const Shape2D& shape = {}
-        ) noexcept;
+        constexpr Area2D() noexcept;
 
         [[nodiscard]] constexpr std::span<const Area2D* const> getOverlappingAreas() const noexcept;
 
@@ -37,15 +24,17 @@ namespace SPhys {
         std::vector<Area2D*> mOverlappingAreas {};
     };
 
-    constexpr Area2D::Area2D(
-        const Pixels<Vector2>& translation,
-        const float rotation,
-        const Shape2D& shape
-    ) noexcept
-        : CollisionObject2D(translation, rotation, shape)
-    {
-        mObjectType = ObjectType2D::area;
-    }
+    constexpr Area2D::Area2D() noexcept
+        : CollisionObject2D(ObjectType2D::area)
+#ifdef SPHYS_DEBUG
+        , areaEntered([this](const Area2D* other) {
+            std::printf("Area2D %p entered Area %p\n", this, other);
+        })
+        , areaExited([this](const Area2D* other) {
+            std::printf("Area2D %p exited Area %p\n", this, other);
+        })
+#endif
+    {}
 
     constexpr std::span<const Area2D* const> Area2D::getOverlappingAreas() const noexcept {
         return { mOverlappingAreas.begin(), mOverlappingAreas.end() };

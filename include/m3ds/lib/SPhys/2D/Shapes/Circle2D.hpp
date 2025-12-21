@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BoundingBox2D.hpp"
-#include "Projection2D.hpp"
+#include "../Projection2D.hpp"
 #include "../../Spatial/Units.hpp"
 #include "../../Spatial/Vector2.hpp"
 

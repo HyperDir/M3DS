@@ -1,51 +1,80 @@
 #include <m3ds/nodes/2d/KinematicBody2D.hpp>
 
-namespace M3DS {
-    KinematicBody2D::KinematicBody2D()
-        : PhysicsBody2D(&mSpecialisedObject)
-    {
-        mSpecialisedObject.userData = this;
-    }
+#include "m3ds/nodes/Viewport.hpp"
 
-    void KinematicBody2D::setVelocity(const PixelsPerSecond<Vector2>& to) noexcept {
-        mSpecialisedObject.setVelocity(to);
+namespace M3DS {
+    void KinematicBody2D::setVelocity(const Vector2& to) noexcept {
+        mAccessor->setVelocity(to);
     }
 
     void KinematicBody2D::setUpDirection(const Vector2& to) noexcept {
-        mSpecialisedObject.setUpDirection(to);
+        mAccessor->setUpDirection(to);
     }
 
     void KinematicBody2D::setSlideOnSlope(const bool to) noexcept {
-        mSpecialisedObject.setSlideOnSlope(to);
+        mAccessor->setSlideOnSlope(to);
     }
 
-    const PixelsPerSecond<Vector2>& KinematicBody2D::getVelocity() const noexcept {
-        return mSpecialisedObject.getVelocity();
+    const MetresPerSecond<Vector2>& KinematicBody2D::getVelocity() const noexcept {
+        return mAccessor->getVelocity();
     }
 
     const Vector2& KinematicBody2D::getUpDirection() const noexcept {
-        return mSpecialisedObject.getUpDirection();
+        return mAccessor->getUpDirection();
     }
 
     bool KinematicBody2D::getSlideOnSlope() const noexcept {
-        return mSpecialisedObject.getSlideOnSlope();
+        return mAccessor->getSlideOnSlope();
     }
 
     bool KinematicBody2D::isOnGround() const noexcept {
-        return mSpecialisedObject.isOnGround();
+        return mAccessor->isOnGround();
     }
 
-    struct SerialisationData {
-        Vector2 velocity;
-        Vector2 upDirection;
-        bool slideOnSlope;
-    };
+    void KinematicBody2D::afterTreeEnter() {
+        PhysicsBody2D::afterTreeEnter();
+
+        mAccessor = getViewport()->getPhysicsServer2d().emplaceKinematicBody();
+        mAccessor->userData = this;
+
+        updateCollisionObject(mAccessor.get());
+        externaliseState();
+
+        mAccessor->setSlideOnSlope(mSerialisationData.slideOnSlope);
+        mAccessor->setUpDirection(mSerialisationData.upDirection);
+    }
+
+    void KinematicBody2D::beforeTreeExit() {
+        PhysicsBody2D::beforeTreeExit();
+
+        internaliseState();
+
+        getViewport()->getPhysicsServer2d().eraseKinematicBody(mAccessor);
+        mAccessor = {};
+        updateCollisionObject(nullptr);
+    }
+
+    void KinematicBody2D::internaliseState() noexcept {
+        PhysicsBody2D::internaliseState();
+
+        mSerialisationData.velocity = getVelocity();
+        mSerialisationData.upDirection = getUpDirection();
+        mSerialisationData.slideOnSlope = getSlideOnSlope();
+    }
+
+    void KinematicBody2D::externaliseState() noexcept {
+        PhysicsBody2D::externaliseState();
+
+        setVelocity(mSerialisationData.velocity);
+        setUpDirection(mSerialisationData.upDirection);
+        setSlideOnSlope(mSerialisationData.slideOnSlope);
+    }
 
     Error KinematicBody2D::serialise(const BinaryOutFileAccessor file) const noexcept {
         if (const Error error = PhysicsBody2D::serialise(file); error != Error::none)
             return error;
 
-        const SerialisationData data {
+        const InternalData data {
             getVelocity(),
             getUpDirection(),
             getSlideOnSlope(),
@@ -61,7 +90,7 @@ namespace M3DS {
         if (const Error error = PhysicsBody2D::deserialise(file); error != Error::none)
             return error;
 
-        SerialisationData data;
+        InternalData data;
         if (!file.read(data))
             return Error::file_read_fail;
 
@@ -74,6 +103,7 @@ namespace M3DS {
 
     REGISTER_METHODS(
         KinematicBody2D,
+
         MUTABLE_METHOD(setVelocity),
         MUTABLE_METHOD(setUpDirection),
         MUTABLE_METHOD(setSlideOnSlope),
@@ -85,6 +115,7 @@ namespace M3DS {
 
     REGISTER_MEMBERS(
         KinematicBody2D,
+
         bindMember("velocity", &KinematicBody2D::getVelocity, &KinematicBody2D::setVelocity),
         bindMember("upDirection", &KinematicBody2D::getUpDirection, &KinematicBody2D::setUpDirection),
         bindMember("slideOnSlope", &KinematicBody2D::getSlideOnSlope, &KinematicBody2D::setSlideOnSlope),

@@ -97,7 +97,7 @@ namespace M3DS {
 			boneTrack.rotationInterpolationMethod = boneTrackHeader.rotationMethod;
 			boneTrack.scaleInterpolationMethod = boneTrackHeader.scaleMethod;
 
-			boneTrack.trackData = M3DS::make_unique_nothrow<float[]>(translationTrackSize + rotationTrackSize + scaleTrackSize);
+			boneTrack.trackData = M3DS::make_unique_for_overwrite_nothrow<float[]>(translationTrackSize + rotationTrackSize + scaleTrackSize);
 			if (!boneTrack.trackData) {
 			    Debug::err("Failed to allocate bone track data!");
 		        return std::unexpected{ Error::allocation_failed };
@@ -224,7 +224,7 @@ namespace M3DS {
 				    return std::unexpected{ Error::file_read_fail };
 				}
 
-				const auto t3xData = M3DS::make_unique_nothrow<std::byte[]>(t3xSize);
+				const auto t3xData = M3DS::make_unique_for_overwrite_nothrow<std::byte[]>(t3xSize);
 				if (!t3xData) {
 				    Debug::err("Failed to allocate t3x data!");
 				    return std::unexpected{ Error::file_read_fail };

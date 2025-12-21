@@ -6,13 +6,7 @@ namespace SPhys {
     class KinematicBody2D : public PhysicsBody2D {
         template <PhysicsEnvironment2D> friend class PhysicsServer2D;
     public:
-        explicit constexpr KinematicBody2D(
-            const Pixels<Vector2>& translation = {},
-            float rotation = {},
-            const Shape2D& shape = {},
-            const Vector2& upDirection = {0, 1},
-            bool slideOnSlope = false
-        ) noexcept;
+        constexpr KinematicBody2D() noexcept;
 
         constexpr void setVelocity(const PixelsPerSecond<Vector2>& to) noexcept;
         constexpr void addVelocity(const PixelsPerSecond<Vector2>& amount) noexcept;
@@ -27,24 +21,14 @@ namespace SPhys {
         [[nodiscard]] constexpr bool isOnGround() const noexcept;
     private:
         PixelsPerSecond<Vector2> mVelocity {};
-        Vector2 mUpDirection { 0, 1};
+        Vector2 mUpDirection { 0.f, 1.f };
         bool mSlideOnSlope {};
         bool mOnGround {};
     };
 
-    constexpr KinematicBody2D::KinematicBody2D(
-        const Pixels<Vector2>& translation,
-        float rotation,
-        const Shape2D& shape,
-        const Vector2& upDirection,
-        const bool slideOnSlope
-    ) noexcept
-        : PhysicsBody2D(translation, rotation, shape)
-        , mUpDirection(upDirection)
-        , mSlideOnSlope(slideOnSlope)
-    {
-        mObjectType = ObjectType2D::kinematic_body;
-    }
+    constexpr KinematicBody2D::KinematicBody2D() noexcept
+        : PhysicsBody2D(ObjectType2D::kinematic_body)
+    {}
 
     constexpr void KinematicBody2D::setVelocity(const PixelsPerSecond<Vector2>& to) noexcept {
         mVelocity = to;

@@ -54,7 +54,7 @@ namespace M3DS {
         using ObjectPointer = std::conditional_t<IsConst, const Object*, Object*>;
     public:
         template <std::size_t N>
-        [[nodiscard]] explicit constexpr GenericMethod(const char (&name)[N]) noexcept;
+        [[nodiscard]] explicit consteval GenericMethod(const char (&name)[N]) noexcept;
 
         virtual ~GenericMethod() = default;
 
@@ -81,7 +81,7 @@ namespace M3DS {
         using ObjectPointer = std::conditional_t<IsConst, const Object*, Object*>;
     public:
         template <std::size_t N>
-        [[nodiscard]] explicit constexpr Method(const char (&name)[N]) noexcept;
+        [[nodiscard]] explicit consteval Method(const char (&name)[N]) noexcept;
 
         [[nodiscard]] std::expected<BindableTypesVariant, Error> genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept final;
 
@@ -98,7 +98,7 @@ namespace M3DS {
         using MethodType = ReturnType(ClassType::*)(Args...) const;
     public:
         template <std::size_t N>
-        constexpr ConstSpecialisedMethod(
+        consteval ConstSpecialisedMethod(
             const char (&name)[N],
             MethodType method
         ) noexcept;
@@ -114,7 +114,7 @@ namespace M3DS {
         using MethodType = ReturnType(ClassType::*)(Args...);
     public:
         template <std::size_t N>
-        constexpr MutableSpecialisedMethod(
+        consteval MutableSpecialisedMethod(
             const char (&name)[N],
             MethodType method
         ) noexcept;
@@ -131,7 +131,7 @@ namespace M3DS {
     public:
 
         template <std::size_t N>
-        constexpr MutableWrapperForConstSpecialisedMethod(
+        consteval MutableWrapperForConstSpecialisedMethod(
             const char (&name)[N],
             MethodType method
         ) noexcept;
@@ -180,12 +180,12 @@ namespace M3DS {
         std::array<BoundMethodPair, sizeof...(Pairs)> mArray;
 
         template <std::size_t... Is>
-        [[nodiscard]] explicit constexpr MethodPack(Pairs&&... methods, std::index_sequence<Is...>)
+        [[nodiscard]] explicit consteval MethodPack(Pairs&&... methods, std::index_sequence<Is...>)
             : mMethods(std::forward<Pairs>(methods)...)
             , mArray{std::get<Is>(mMethods).get()...}
         {}
     public:
-        [[nodiscard]] explicit constexpr MethodPack(Pairs&&... methods) noexcept
+        [[nodiscard]] explicit consteval MethodPack(Pairs&&... methods) noexcept
             : MethodPack(std::forward<Pairs>(methods)..., std::index_sequence_for<Pairs...>())
         {}
 

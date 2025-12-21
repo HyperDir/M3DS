@@ -48,20 +48,20 @@ namespace M3DS {
         mPhysicsServer3D.updateAreas();
         mPhysicsServer3D.step(delta);
 
-        for (const auto* area : mPhysicsServer3D.getAreas())
-            static_cast<CollisionObject3D*>(area->userData)->readback();
+        for (const auto& area : mPhysicsServer3D.getAreas())
+            static_cast<CollisionObject3D*>(area.userData)->readback();
 
-        for (const auto* body : mPhysicsServer3D.getKinematicBodies())
-            static_cast<CollisionObject3D*>(body->userData)->readback();
+        for (const auto& body : mPhysicsServer3D.getKinematicBodies())
+            static_cast<CollisionObject3D*>(body.userData)->readback();
 
         mPhysicsServer2D.updateAreas();
         mPhysicsServer2D.step(delta);
 
-        for (const auto* area : mPhysicsServer2D.getAreas())
-            static_cast<CollisionObject2D*>(area->userData)->readback();
+        for (const auto& area : mPhysicsServer2D.getAreas())
+            static_cast<CollisionObject2D*>(area.userData)->readback();
 
-        for (const auto* body : mPhysicsServer2D.getKinematicBodies())
-            static_cast<CollisionObject2D*>(body->userData)->readback();
+        for (const auto& body : mPhysicsServer2D.getKinematicBodies())
+            static_cast<CollisionObject2D*>(body.userData)->readback();
     }
 
     void Viewport::display() noexcept {

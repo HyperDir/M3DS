@@ -4,39 +4,39 @@
 
 namespace M3DS {
     void CollisionObject3D::setLayer(const std::uint32_t layer) noexcept {
-        mCollisionObject->setLayer(layer);
+        getCollisionObject()->setLayer(layer);
     }
 
     void CollisionObject3D::setMask(const std::uint32_t mask) noexcept {
-        mCollisionObject->setMask(mask);
+        getCollisionObject()->setMask(mask);
     }
 
     std::uint32_t CollisionObject3D::getLayer() const noexcept {
-        return mCollisionObject->getLayer();
+        return getCollisionObject()->getLayer();
     }
 
     std::uint32_t CollisionObject3D::getMask() const noexcept {
-        return mCollisionObject->getMask();
+        return getCollisionObject()->getMask();
     }
 
-    void CollisionObject3D::setShape(SPhys::Shape3D shape) noexcept {
-        mCollisionObject->setLocalShape(std::move(shape));
+    void CollisionObject3D::setShape(const SPhys::Shape3D& shape) noexcept {
+        getCollisionObject()->setLocalShape(shape);
     }
 
     const SPhys::Shape3D& CollisionObject3D::getShape() const noexcept {
-        return mCollisionObject->getLocalShape();
+        return getCollisionObject()->getLocalShape();
     }
 
     void CollisionObject3D::enableCollision() noexcept {
-        mCollisionObject->enable();
+        getCollisionObject()->enable();
     }
 
     void CollisionObject3D::disableCollision() noexcept {
-        mCollisionObject->disable();
+        getCollisionObject()->disable();
     }
 
     bool CollisionObject3D::isCollisionDisabled() const noexcept {
-        return mCollisionObject->isDisabled();
+        return getCollisionObject()->isDisabled();
     }
 
     SPhys::CollisionObject3D* CollisionObject3D::getCollisionObject() noexcept {
@@ -45,6 +45,12 @@ namespace M3DS {
 
     const SPhys::CollisionObject3D* CollisionObject3D::getCollisionObject() const noexcept {
         return mCollisionObject;
+    }
+
+    void CollisionObject3D::readback() noexcept {
+        const SPhys::CollisionObject3D* object = getCollisionObject();
+        setGlobalTranslation(object->getTranslation());
+        setGlobalRotation(object->getRotation());
     }
 
     Error serialiseCollisionShape(const SPhys::Shape3D& shape, const BinaryOutFileAccessor file) noexcept {
@@ -81,7 +87,7 @@ namespace M3DS {
         if (!file.write(getLayer()) || !file.write(getMask()) || !file.write(isCollisionDisabled()))
             return Error::file_write_fail;
 
-        return serialiseCollisionShape(mCollisionObject->getLocalShape(), file);
+        return serialiseCollisionShape(getCollisionObject()->getLocalShape(), file);
     }
 
     Error CollisionObject3D::deserialise(const BinaryInFileAccessor file) noexcept {
@@ -106,7 +112,7 @@ namespace M3DS {
         if (const Error error = deserialiseCollisionShape(shape, file); error != Error::none)
             return error;
 
-        mCollisionObject->setLocalShape(shape);
+        getCollisionObject()->setLocalShape(shape);
 
         return Error::none;
     }
@@ -115,35 +121,31 @@ namespace M3DS {
         Node3D::update(delta);
 
         const Matrix4x4& xform = getGlobalTransform();
-        mCollisionObject->setTranslation(xform.getTranslation());
-        mCollisionObject->setRotation(xform.getRotation());
+        getCollisionObject()->setTranslation(xform.getTranslation());
+        getCollisionObject()->setRotation(xform.getRotation());
     }
 
-    CollisionObject3D::CollisionObject3D(
-        SPhys::CollisionObject3D* collisionObject
-    ) noexcept : mCollisionObject(collisionObject) {}
+    void CollisionObject3D::internaliseState() noexcept {
+        mLayer = mCollisionObject->getLayer();
+        mMask = mCollisionObject->getMask();
 
-    void CollisionObject3D::afterTreeEnter() {
-        Node3D::afterTreeEnter();
-
-        if (auto* viewport = getViewport())
-            viewport->mPhysicsServer3D.registerObject(*mCollisionObject);
+        mShape = mCollisionObject->getLocalShape();
+        mCollisionDisabled = mCollisionObject->isDisabled();
     }
 
-    void CollisionObject3D::beforeTreeExit() {
-        Node3D::beforeTreeExit();
+    void CollisionObject3D::externaliseState() noexcept {
+        mCollisionObject->setLayer(mLayer);
+        mCollisionObject->setMask(mMask);
 
-        if (auto* viewport = getViewport())
-            viewport->mPhysicsServer3D.unregisterObject(*mCollisionObject);
-    }
+        mCollisionObject->setLocalShape(mShape);
 
-    void CollisionObject3D::readback() noexcept {
-        setGlobalTranslation(mCollisionObject->getTranslation());
-        setGlobalRotation(mCollisionObject->getRotation());
+        if (mCollisionDisabled) mCollisionObject->disable();
+        else mCollisionObject->enable();
     }
 
     REGISTER_METHODS(
         CollisionObject3D,
+
         MUTABLE_METHOD(setLayer),
         MUTABLE_METHOD(setMask),
         MUTABLE_METHOD(enableCollision),
@@ -155,6 +157,7 @@ namespace M3DS {
 
     REGISTER_MEMBERS(
         CollisionObject3D,
+
         PRIVATE_MEMBER(layer, getLayer, setLayer),
         PRIVATE_MEMBER(mask, getMask, setMask)
     );

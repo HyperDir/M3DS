@@ -1,34 +1,19 @@
 #pragma once
 
-#include <functional>
 #include <vector>
 
 #include "CollisionObject3D.hpp"
+
+#include "../../Containers/MoveOnlySmallFunction.hpp"
 
 namespace SPhys {
     class Area3D : public CollisionObject3D {
         template <PhysicsEnvironment3D> friend class PhysicsServer3D;
     public:
-        std::function<void(Area3D*)> areaEntered = [this](const Area3D* other) {
-            std::cout << std::format(
-                "Area3D {} entered Area {}",
-                static_cast<const void*>(this),
-                static_cast<const void*>(other)
-            ) << std::endl;
-        };
-        std::function<void(Area3D*)> areaExited = [this](const Area3D* other) {
-            std::cout << std::format(
-                "Area3D {} exited Area {}",
-                static_cast<const void*>(this),
-                static_cast<const void*>(other)
-            ) << std::endl;
-        };
+        MoveOnlySmallFunction<void(Area3D*)> areaEntered {};
+        MoveOnlySmallFunction<void(Area3D*)> areaExited {};
 
-        explicit constexpr Area3D(
-            const Metres<Vector3>& translation = {},
-            const Quaternion& rotation = {},
-            const Shape3D& shape = {}
-        ) noexcept;
+        constexpr Area3D();
 
         [[nodiscard]] constexpr std::span<const Area3D* const> getOverlappingAreas() const noexcept;
 
@@ -37,15 +22,17 @@ namespace SPhys {
         std::vector<Area3D*> mOverlappingAreas {};
     };
 
-    constexpr Area3D::Area3D(
-        const Metres<Vector3>& translation,
-        const Quaternion& rotation,
-        const Shape3D& shape
-    ) noexcept
-        : CollisionObject3D(translation, rotation, shape)
-    {
-        mObjectType = ObjectType3D::area;
-    }
+    constexpr Area3D::Area3D()
+        : CollisionObject3D(ObjectType3D::area)
+#ifdef SPHYS_DEBUG
+        , areaEntered([this](const Area3D* other) {
+            std::printf("Area3D %p entered Area %p\n", this, other);
+        })
+        , areaExited([this](const Area3D* other) {
+            std::printf("Area3D %p exited Area %p\n", this, other);
+        })
+#endif
+    {}
 
     constexpr std::span<const Area3D* const> Area3D::getOverlappingAreas() const noexcept {
         return { mOverlappingAreas.begin(), mOverlappingAreas.end() };

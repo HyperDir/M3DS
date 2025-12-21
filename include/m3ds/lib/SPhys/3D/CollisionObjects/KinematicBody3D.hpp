@@ -6,13 +6,7 @@ namespace SPhys {
     class KinematicBody3D : public PhysicsBody3D {
         template <PhysicsEnvironment3D> friend class PhysicsServer3D;
     public:
-        explicit constexpr KinematicBody3D(
-            const Metres<Vector3>& translation = {},
-            const Quaternion& rotation = {},
-            const Shape3D& shape = {},
-            const Vector3& upDirection = {0, 1, 0},
-            bool slideOnSlope = false
-        ) noexcept;
+        constexpr KinematicBody3D() noexcept;
 
         constexpr void setVelocity(const MetresPerSecond<Vector3>& to) noexcept;
         constexpr void addVelocity(const MetresPerSecond<Vector3>& amount) noexcept;
@@ -27,24 +21,12 @@ namespace SPhys {
         [[nodiscard]] constexpr bool isOnGround() const noexcept;
     private:
         MetresPerSecond<Vector3> mVelocity {};
-        Vector3 mUpDirection { 0, 1, 0 };
+        Vector3 mUpDirection { 0.f, 1.f, 0.f };
         bool mSlideOnSlope {};
         bool mOnGround {};
     };
 
-    constexpr KinematicBody3D::KinematicBody3D(
-        const Metres<Vector3>& translation,
-        const Quaternion& rotation,
-        const Shape3D& shape,
-        const Vector3& upDirection,
-        const bool slideOnSlope
-    ) noexcept
-        : PhysicsBody3D(translation, rotation, shape)
-        , mUpDirection(upDirection)
-        , mSlideOnSlope(slideOnSlope)
-    {
-        mObjectType = ObjectType3D::kinematic_body;
-    }
+    constexpr KinematicBody3D::KinematicBody3D() noexcept : PhysicsBody3D(ObjectType3D::kinematic_body) {}
 
     constexpr void KinematicBody3D::setVelocity(const MetresPerSecond<Vector3>& to) noexcept {
         mVelocity = to;

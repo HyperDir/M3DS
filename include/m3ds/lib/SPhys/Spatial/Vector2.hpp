@@ -24,6 +24,8 @@ namespace SPhys {
         [[nodiscard]] constexpr T lengthSquared() const noexcept;
         [[nodiscard]] constexpr auto length() const noexcept;
 
+        [[nodiscard]] constexpr double manhattanLength() const noexcept;
+
         [[nodiscard]] constexpr Vec2 abs() const noexcept;
 
         [[nodiscard]] constexpr Vec2 normalise() const noexcept requires std::floating_point<T>;
@@ -94,6 +96,11 @@ namespace SPhys {
     template <Arithmetic T>
     constexpr auto Vec2<T>::length() const noexcept {
         return std::sqrt(lengthSquared());
+    }
+
+    template <Arithmetic T>
+    constexpr double Vec2<T>::manhattanLength() const noexcept {
+        return std::abs(x) + std::abs(y);
     }
 
     template <Arithmetic T>
