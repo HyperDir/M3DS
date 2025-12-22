@@ -36,11 +36,17 @@ namespace M3DS {
     class GetMethodTypeIdentifiersImpl;
 
     template <typename ReturnType, typename... Args>
+    requires (sizeof...(Args) > 0)
     class GetMethodTypeIdentifiersImpl<ReturnType(Args...)> {
-        static constexpr TypeIdentifier returnTypeId = getIdentifier<AdaptPointer<ReturnType>>();
         static constexpr TypeIdentifier argTypeIds[] { getIdentifier<AdaptPointer<Args>>()... };
     public:
-        static constexpr MethodTypeIdentifiers value { returnTypeId, std::span<const TypeIdentifier>{ argTypeIds, sizeof...(Args) } };
+        static constexpr MethodTypeIdentifiers value { getIdentifier<AdaptPointer<ReturnType>>(), std::span<const TypeIdentifier>{ argTypeIds, sizeof...(Args) } };
+    };
+
+    template <typename ReturnType>
+    class GetMethodTypeIdentifiersImpl<ReturnType()> {
+    public:
+        static constexpr MethodTypeIdentifiers value { getIdentifier<AdaptPointer<ReturnType>>(), std::span<const TypeIdentifier>{} };
     };
 
     template <typename T>
