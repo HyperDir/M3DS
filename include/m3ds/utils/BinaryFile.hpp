@@ -32,7 +32,7 @@ namespace M3DS {
         [[nodiscard]] explicit constexpr operator bool() const noexcept;
 
         [[nodiscard]] constexpr std::optional<BinaryFileAccessor> getAccessorIfValid() & noexcept;
-        [[nodiscard]] constexpr BinaryFileAccessor getAccessor() & noexcept;
+        [[nodiscard]] constexpr BinaryFileAccessor getAccessor() &;
 
         [[nodiscard]] constexpr FILE* getNativeHandle() & noexcept;
 
@@ -61,7 +61,7 @@ namespace M3DS {
         [[nodiscard]] explicit constexpr operator bool() const noexcept;
 
         [[nodiscard]] constexpr std::optional<BinaryInFileAccessor> getAccessorIfValid() & noexcept;
-        [[nodiscard]] constexpr BinaryInFileAccessor getAccessor() & noexcept;
+        [[nodiscard]] constexpr BinaryInFileAccessor getAccessor() &;
 
         [[nodiscard]] constexpr FILE* getNativeHandle() & noexcept;
 
@@ -86,7 +86,7 @@ namespace M3DS {
         [[nodiscard]] explicit constexpr operator bool() const noexcept;
 
         [[nodiscard]] constexpr std::optional<BinaryOutFileAccessor> getAccessorIfValid() & noexcept;
-        [[nodiscard]] constexpr BinaryOutFileAccessor getAccessor() & noexcept;
+        [[nodiscard]] constexpr BinaryOutFileAccessor getAccessor() &;
 
         [[nodiscard]] constexpr FILE* getNativeHandle() & noexcept;
 
@@ -182,7 +182,7 @@ namespace M3DS {
         return {};
     }
 
-    constexpr BinaryFileAccessor BinaryFile::getAccessor() & noexcept {
+    constexpr BinaryFileAccessor BinaryFile::getAccessor() & {
         if (!mFile) {
 #if __cpp_exceptions
             throw InvalidBinaryFileException{};
@@ -275,7 +275,7 @@ namespace M3DS {
         return {};
     }
 
-    constexpr BinaryInFileAccessor BinaryInFile::getAccessor() & noexcept {
+    constexpr BinaryInFileAccessor BinaryInFile::getAccessor() & {
         if (!mFile) {
 #if __cpp_exceptions
             throw InvalidBinaryFileException{};
@@ -305,7 +305,7 @@ namespace M3DS {
         return {};
     }
 
-    constexpr BinaryOutFileAccessor BinaryOutFile::getAccessor() & noexcept {
+    constexpr BinaryOutFileAccessor BinaryOutFile::getAccessor() & {
         if (!mFile) {
 #if __cpp_exceptions
             throw InvalidBinaryFileException{};
