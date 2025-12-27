@@ -1,5 +1,4 @@
 #pragma once
-#include "reference/resource/TileSet.hpp"
 
 #ifdef __3DS__
 #include <3ds.h>
@@ -57,6 +56,9 @@
 #include <m3ds/nodes/ui/UINode.hpp>
 
 #include <m3ds/utils/Debug.hpp>
+#include <m3ds/utils/Visitor.hpp>
+
+#include <m3ds/reference/resource/TileSet.hpp>
 
 namespace M3DS {
 #ifdef __3DS__

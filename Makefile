@@ -62,12 +62,12 @@ PICA_FILES		:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.pica))
 O_FILES 		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .o, $(basename $(C_FILES) $(CXX_FILES))))
 BIN_FILES		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .bin, $(basename $(basename $(PICA_FILES)))))
 
-INCLUDE			:= $(foreach dir,$(INCLUDE_DIR),-I$(CURDIR)/$(dir)) $(foreach dir,$(LIB_DIRS),-isystem $(dir)/include)
-EMBED			:= $(foreach dir,$(EMBED_DIR),--embed-dir=$(CURDIR)/$(dir))
+INCLUDE			:= $(foreach dir,$(INCLUDE_DIR),-I./$(dir)) $(foreach dir,$(LIB_DIRS),-isystem $(dir)/include)
+EMBED			:= $(foreach dir,$(EMBED_DIR),--embed-dir=./$(dir))
 
-CC		:= arm-none-eabi-gcc
-CXX		:= arm-none-eabi-g++
-AR		:= arm-none-eabi-gcc-ar
+CC		:= $(DEVKITARM)/bin/arm-none-eabi-gcc
+CXX		:= $(DEVKITARM)/bin/arm-none-eabi-g++
+AR		:= $(DEVKITARM)/bin/arm-none-eabi-gcc-ar
 LD		:= $(CXX)
 
 # msys2 make and mingw32-make don't agree on PATH format on Windows
