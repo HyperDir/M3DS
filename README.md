@@ -21,9 +21,9 @@ M3DS does not use exceptions or runtime type information, however it can be reco
     - On Windows, use the devkitPro Updater at https://github.com/devkitPro/installer/releases
     - On Linux or macOS, follow the instructions at https://devkitpro.org/wiki/Getting_Started
 2. Open a terminal in the `m3ds` folder.
-3. Run `make`.
+3. Run `make`. To install system-wide, run `make install` instead.
 
-The final binary and the required header files will be found in the `lib` directory.
+The final `libm3ds.a` will be found in the `lib` directory.
 
 ## Example: Hello World
 ```c++
@@ -70,7 +70,7 @@ int main() {
     camera->enable();
 
     // Load a 3D model (file converted from glTF using M3DSModelConverter)
-    std::expected mesh = M3DS::Mesh::load("romfs:/models/GDBot.mod3ds");
+    std::expected mesh = M3DS::Mesh::load("romfs:/GDBot.mod3ds");
     if (!mesh)
         M3DS::Debug::terminate("Failed to load model with error code: {}!", std::to_underlying(mesh.error()));
 
