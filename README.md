@@ -78,7 +78,9 @@ int main() {
     M3DS::MeshInstance* meshInstance = topScreen->emplaceChild<M3DS::MeshInstance>(mesh.value());
 
     const std::size_t animationCount = meshInstance->getAnimationCount();
-    if (animationCount != 0) {
+    if (animationCount == 0) {
+        M3DS::Debug::warn("Model has no animations!");
+    } else {
         M3DS::Debug::log("Playing animation {}", 0);
         meshInstance->playAnimationIdx(0);
     }
@@ -91,7 +93,7 @@ int main() {
         if (M3DS::Input::isKeyPressed(M3DS::Input::Key::start))
             root.exit();
 
-        if (M3DS::Input::isKeyPressed(M3DS::Input::Key::a)) {
+        if (M3DS::Input::isKeyPressed(M3DS::Input::Key::a) && animationCount != 0) {
             idx = (idx + 1) % animationCount;
             M3DS::Debug::log("Playing animation {}", idx);
             meshInstance->playAnimationIdx(idx);
