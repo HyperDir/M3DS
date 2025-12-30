@@ -39,7 +39,7 @@ namespace M3DS {
         );
 
         mTargetLeft.reset(C3D_RenderTargetCreate(
-            240,
+            GSP_SCREEN_WIDTH,
             screen == Screen::top ? GSP_SCREEN_HEIGHT_TOP : GSP_SCREEN_HEIGHT_BOTTOM,
             GPU_RB_RGBA8,
             GPU_RB_DEPTH24_STENCIL8
@@ -54,7 +54,7 @@ namespace M3DS {
 
         if (stereoscopic3d && screen == Screen::top) {
             mTargetRight.reset(C3D_RenderTargetCreate(
-                240,
+                GSP_SCREEN_WIDTH,
                 GSP_SCREEN_HEIGHT_TOP,
                 GPU_RB_RGBA8,
                 GPU_RB_DEPTH24_STENCIL8
