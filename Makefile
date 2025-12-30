@@ -99,6 +99,7 @@ $(OUTPUT_DIR)/%.a: $(O_FILES)
 	$(info Archiving $(notdir $@))
 	@mkdir -p $(dir $@)
 	@$(AR) rcs $@ $(O_FILES)
+	$(info Compiled $(TARGET) in release mode!)
 
 $(BUILD_DIR)/%.o: $(SOURCES_DIR)/%.c $(BIN_FILES)
 	$(info Compiling $< for release)
@@ -117,6 +118,7 @@ $(OUTPUT_DIR)/%d.a: $(OD_FILES)
 	$(info Archiving $(notdir $@))
 	@mkdir -p $(dir $@)
 	@$(AR) rcs $@ $(OD_FILES)
+	$(info Compiled $(TARGET) in debug mode!)
 
 $(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.c $(BIN_FILES)
 	$(info Compiling $< for debug)
@@ -131,10 +133,8 @@ $(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.cpp $(BIN_FILES)
 
 
 debug: $(OUTPUT_DIR)/lib$(TARGET)d.a
-	$(info Compiled $(TARGET) in debug mode!)
 
 release: $(OUTPUT_DIR)/lib$(TARGET).a
-	$(info Compiled $(TARGET) in release mode!)
 
 lib: release
 
