@@ -8,9 +8,11 @@
 
 #include <cstring>
 
-constinit std::array vshader = std::to_array<unsigned char>({
+namespace M3DS {
+    constinit std::array vshader = std::to_array<unsigned char>({
 #embed <vshader.bin>
-});
+    });
+}
 
 #ifdef M3DS_SFML
 #include <GL/glew.h>
