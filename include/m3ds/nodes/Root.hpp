@@ -56,6 +56,8 @@ namespace M3DS {
         std::vector<Node*> mUpdateList {};
 
         std::queue<Node*> mFreeQueue {};
+
+        float mProcessLead {};
     };
 
     void Root::mainLoop(MainLoopCallable auto callable) noexcept {

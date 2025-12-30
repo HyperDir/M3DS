@@ -97,31 +97,22 @@ namespace M3DS {
     }
 
     void Root::treeUpdate(const Seconds<float> delta) noexcept {
-        // std::stack<Node*, std::vector<Node*>> stack {};
-        // stack.emplace(this);
-        //
-        // while (!stack.empty()) {
-        //     Node* curr = stack.top();
-        //     stack.pop();
-        //
-        //     curr->update(delta);
-        //     if (auto* const script = curr->getScript())
-        //         script->process(delta);
-        //
-        //     for (auto& child : curr->getChildren()) {
-        //         stack.emplace(child.get());
-        //     }
-        // }
-        //
-
         for (Node* node : mUpdateList) {
             node->update(delta);
             if (node->mScript)
                 node->mScript->update(delta);
         }
 
-        for (auto* viewport : mViewports) {
-            viewport->physicsUpdate(delta);
+        mProcessLead += delta;
+
+        static constexpr float physicsDelta = 1.f / 60.f;
+
+        while (mProcessLead >= physicsDelta) {
+            mProcessLead -= physicsDelta;
+
+            for (auto* viewport : mViewports) {
+                viewport->physicsUpdate(physicsDelta);
+            }
         }
     }
 
