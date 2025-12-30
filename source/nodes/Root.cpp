@@ -84,6 +84,10 @@ namespace M3DS {
         std::erase(mUpdateList, node);
     }
 
+    void Root::addToFreeQueue(Node* node) {
+        mFreeQueue.emplace(node);
+    }
+
     Error Root::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
         return Error::root_serialisation_disabled;
     }

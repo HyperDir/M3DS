@@ -332,7 +332,15 @@ namespace M3DS {
     }
 
     void Node::queueFree() {
-        freeQueue.emplace(this);
+        if (Root* root = getRoot())
+            root->addToFreeQueue(this);
+        else
+            free();
+    }
+
+    void Node::free() {
+        if (Node* parent = getParent())
+            erase_if(parent->mChildren, [this](const std::unique_ptr<Node>& n) { return n.get() == this; });
     }
 
     Error Node::serialise(BinaryOutFileAccessor file) const noexcept {

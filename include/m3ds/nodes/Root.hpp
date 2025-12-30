@@ -41,6 +41,8 @@ namespace M3DS {
 
         void enableUpdate(Node* node);
         void disableUpdate(Node* node);
+
+        void addToFreeQueue(Node* node);
     protected:
         friend class Viewport;
 
@@ -52,6 +54,8 @@ namespace M3DS {
 
         std::vector<Viewport*> mViewports {};
         std::vector<Node*> mUpdateList {};
+
+        std::queue<Node*> mFreeQueue {};
     };
 
     void Root::mainLoop(MainLoopCallable auto callable) noexcept {
@@ -64,6 +68,11 @@ namespace M3DS {
             DrawEnvironment _ {};
 
             std::invoke(callable, frameTimer());
+
+            while (!mFreeQueue.empty()) {
+                mFreeQueue.front()->free();
+                mFreeQueue.pop();
+            }
         }
     }
 }

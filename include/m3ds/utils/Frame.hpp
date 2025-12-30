@@ -35,15 +35,5 @@ namespace M3DS {
 
             Input::update();
         }
-
-        ~Frame() {
-            while (!Node::freeQueue.empty()) {
-                Node* node = Node::freeQueue.front();
-                Node::freeQueue.pop();
-
-                if (Node* parent = node->getParent())
-                    erase_if(parent->mChildren, [node](const std::unique_ptr<Node>& n) { return n.get() == node; });
-            }
-        }
     };
 }

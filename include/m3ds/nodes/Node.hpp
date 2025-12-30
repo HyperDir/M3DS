@@ -24,7 +24,6 @@ namespace M3DS {
         friend class Root;
         friend class CanvasLayer;
         friend class Viewport;
-        friend class Frame;
     public:
         bool visible = true;
         // bool paused = false;
@@ -92,6 +91,7 @@ namespace M3DS {
         void propagateNotification(Notification notification) noexcept;
 
         void queueFree();
+        void free();
     protected:
         virtual void update(Seconds<float> delta);
         virtual void draw(RenderTarget2D& target);
@@ -114,8 +114,6 @@ namespace M3DS {
         std::vector<std::unique_ptr<Node>> mChildren {};
 
         std::unique_ptr<BaseScript> mScript {};
-
-        static inline std::queue<Node*> freeQueue {};
     };
 
     template <std::derived_from<Node> NodeType, bool isHelper, typename... Args>
