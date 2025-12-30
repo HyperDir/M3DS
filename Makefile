@@ -50,7 +50,7 @@ PORTLIBS		:= $(DEVKITPRO)/portlibs/3ds
 LIBCTRU			:= $(DEVKITPRO)/libctru
 
 LIBS			:= -lcitro2d -lcitro3d -lctru -lm
-LIB_DIRS		:= $(PORTLIBS) $(LIBCTRU) .
+LIB_DIRS		:= . $(PORTLIBS) $(LIBCTRU)
 
 #---------------------------------------------------------------------------------
 # Build Variable Setup
