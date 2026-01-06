@@ -51,8 +51,11 @@ namespace M3DS {
     {}
 
     constexpr DVLB& DVLB::operator=(DVLB&& other) noexcept {
-        if (this != &other)
+        if (this != &other) {
+            if (dvlb)
+                DVLB_Free(dvlb);
             dvlb = std::exchange(other.dvlb, nullptr);
+        }
         return *this;
     }
 
