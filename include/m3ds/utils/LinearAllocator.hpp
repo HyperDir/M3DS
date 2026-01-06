@@ -50,7 +50,7 @@ namespace M3DS {
 		}
 	};
 
-	template <typename T, std::unsigned_integral S = std::size_t>
+	template <typename T, std::integral S = std::size_t>
 	using LinearHeapArray = HeapArray<T, S, LinearAllocator<T>>;
 }
 #endif
