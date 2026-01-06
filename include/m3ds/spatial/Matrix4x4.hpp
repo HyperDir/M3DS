@@ -185,7 +185,7 @@ namespace M3DS {
         mtx[0, 3] = (bottom + top) / (bottom - top);
         mtx[1, 0] = 2.0f / (left - right);
         mtx[1, 3] = (left + right) / (right - left);
-        if (RightHanded) {
+        if constexpr (RightHanded) {
             mtx[2, 2] = 1.0f / (near - far);
         } else {
             mtx[2, 2] = 1.0f / (far - near);
