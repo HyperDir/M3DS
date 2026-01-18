@@ -147,4 +147,4 @@ clean:
 	@echo Cleaning $(TARGET)...
 	@rm -rf $(BUILD_DIR) $(OUTPUT_DIR)
 
--include $(O_FILES:.o=.d)
+-include $(O_FILES:.o=.d) $(OD_FILES:.o=.d)
