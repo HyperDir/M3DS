@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
 #include <string>
 
 #include <source_location>
@@ -31,7 +32,43 @@ namespace M3DS {
         type_mismatch,
         object_conversion_failure
     };
+}
 
+
+
+template <>
+struct std::formatter<M3DS::ErrorCode> : std::formatter<std::string_view> {
+    template <typename FormatContext>
+    auto format(const M3DS::ErrorCode& code, FormatContext& ctx) const {
+        constexpr std::array errorCodes = std::to_array<std::string_view>({
+            "None",
+            "File open fail",
+            "File write fail",
+            "File read fail",
+            "File seek fail",
+            "File invalid data",
+            "Directory not found",
+            "Failed to get path to node",
+            "Allocation failed",
+            "Integer too large",
+            "Invalid class name",
+            "Non default constructible class",
+            "Root serialisation is disabled",
+            "Out of bounds",
+            "Object cast failed",
+            "Not implemented",
+            "No resource path",
+            "Type mismatch",
+            "Object conversion failed"
+        });
+
+        assert(std::to_underlying(code) < errorCodes.size());
+
+        return std::formatter<std::string_view>::format(errorCodes[std::to_underlying(code)], ctx);
+    }
+};
+
+namespace M3DS {
     // Perhaps strip location from release builds?
     struct Failure {
         ErrorCode error {};
@@ -54,12 +91,12 @@ struct std::formatter<M3DS::Failure> : std::formatter<std::string_view> {
         }
         return std::format_to(
             ctx.out(),
-            "{}:{}:{} in function {} failed with error code {}!",
+            "{}:{}:{} in function {} failed with error '{}'!",
             failure.location.file_name(),
             failure.location.line(),
             failure.location.column(),
             failure.location.function_name(),
-            std::to_underlying(failure.error)
+            failure.error
         );
     }
 };
