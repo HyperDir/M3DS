@@ -21,11 +21,11 @@ namespace M3DS {
         );
     }
 
-    Error CentreContainer::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure CentreContainer::serialise(BinaryOutFileAccessor file) const noexcept {
         return SuperType::serialise(file);
     }
 
-    Error CentreContainer::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure CentreContainer::deserialise(BinaryInFileAccessor file) noexcept {
         return SuperType::deserialise(file);
     }
 

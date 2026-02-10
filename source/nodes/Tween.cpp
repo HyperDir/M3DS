@@ -32,14 +32,14 @@ namespace M3DS {
         Node::update(delta);
     }
 
-    Error Tween::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
+    Failure Tween::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
         Debug::err("Tween serialisation not implemented!");
-        return Error::not_implemented;
+        return Failure{ ErrorCode::not_implemented };
     }
 
-    Error Tween::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
+    Failure Tween::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
         Debug::err("Tween serialisation not implemented!");
-        return Error::not_implemented;
+        return Failure{ ErrorCode::not_implemented };
     }
 
 

@@ -23,11 +23,11 @@ namespace M3DS {
         updateCollisionObject(nullptr);
     }
 
-    Error StaticBody3D::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure StaticBody3D::serialise(BinaryOutFileAccessor file) const noexcept {
         return SuperType::serialise(file);
     }
 
-    Error StaticBody3D::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure StaticBody3D::deserialise(BinaryInFileAccessor file) noexcept {
         return SuperType::deserialise(file);
     }
 

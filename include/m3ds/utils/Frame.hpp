@@ -1,12 +1,10 @@
 #pragma once
 
-#include <utility>
 #ifdef __3DS__
 #include <c3d/renderqueue.h>
 #endif
 
 #include <m3ds/utils/Input.hpp>
-#include <m3ds/utils/FrameTimer.hpp>
 
 namespace M3DS {
     class DrawEnvironment {

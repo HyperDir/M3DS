@@ -172,9 +172,9 @@ namespace M3DS {
         return mClipContent;
     }
 
-    Error UINode::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = CanvasItem::serialise(file); error != Error::none)
-            return error;
+    Failure UINode::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(mSize) ||
@@ -182,19 +182,19 @@ namespace M3DS {
             !file.write(mFillSpace) ||
             !file.write(mClipContent)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (const NodePath* neighbour : { &neighbours.up, &neighbours.down, &neighbours.left, &neighbours.right }) {
-            if (const Error error = neighbour->serialise(file); error != Error::none)
-                return error;
+            if (const Failure failure = neighbour->serialise(file))
+                return failure;
         }
 
-        return Error::none;
+        return Success;
     }
 
-    Error UINode::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = CanvasItem::deserialise(file); error != Error::none)
-            return error;
+    Failure UINode::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (
             !file.read(mSize) ||
@@ -202,16 +202,16 @@ namespace M3DS {
             !file.read(mFillSpace) ||
             !file.read(mClipContent)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (NodePath* neighbour : { &neighbours.up, &neighbours.down, &neighbours.left, &neighbours.right }) {
-            if (const Error error = neighbour->deserialise(file); error != Error::none)
-                return error;
+            if (const Failure failure = neighbour->deserialise(file))
+                return failure;
         }
 
         mNeedsResize = true;
 
-        return Error::none;
+        return Success;
     }
 
     void UINode::setSize(const Vector2& to) noexcept {

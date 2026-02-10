@@ -10,20 +10,29 @@ namespace M3DS {
         constexpr Colour(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a = 0xFF);
         constexpr explicit Colour(std::uint32_t c = 0xFFFFFFFF);
 
-        explicit constexpr operator std::uint32_t() const;
-
         constexpr bool operator==(const Colour& other) const noexcept = default;
 
         template <typename... Args>
-        static constexpr Colour mix(const Args&... args) {
-            return {
-                static_cast<std::uint8_t>((args.r + ...) / sizeof...(Args)),
-                static_cast<std::uint8_t>((args.g + ...) / sizeof...(Args)),
-                static_cast<std::uint8_t>((args.b + ...) / sizeof...(Args)),
-                static_cast<std::uint8_t>((args.a + ...) / sizeof...(Args))
-            };
-        }
+        static constexpr Colour mix(const Args&... args);
+
+        [[nodiscard]] constexpr std::uint32_t convertForFrameBuf() const noexcept;
+
+        [[nodiscard]] constexpr std::uint32_t convertForGPU() const noexcept;
     };
+}
+
+
+/* Implementation */
+namespace M3DS {
+    template <typename ... Args>
+    constexpr Colour Colour::mix(const Args&... args) {
+        return {
+            static_cast<std::uint8_t>((args.r + ...) / sizeof...(Args)),
+            static_cast<std::uint8_t>((args.g + ...) / sizeof...(Args)),
+            static_cast<std::uint8_t>((args.b + ...) / sizeof...(Args)),
+            static_cast<std::uint8_t>((args.a + ...) / sizeof...(Args))
+        };
+    }
 
     constexpr Colour::Colour(const std::uint8_t r, const std::uint8_t g, const std::uint8_t b, const std::uint8_t a)
         : r(r)
@@ -39,13 +48,12 @@ namespace M3DS {
         , a(static_cast<std::uint8_t>(c))
     {}
 
-    constexpr Colour::operator std::uint32_t() const {
-        return (
-            static_cast<std::uint32_t>(a) << 24 |
-            static_cast<std::uint32_t>(b) << 16 |
-            static_cast<std::uint32_t>(g) << 8  |
-            static_cast<std::uint32_t>(r)
-        );
+    constexpr std::uint32_t Colour::convertForFrameBuf() const noexcept {
+        return std::byteswap(std::bit_cast<std::uint32_t>(*this));
+    }
+
+    constexpr std::uint32_t Colour::convertForGPU() const noexcept {
+        return std::bit_cast<std::uint32_t>(*this);
     }
 
     constexpr std::ostream& operator<<(std::ostream& stream, const Colour& colour) {
@@ -77,6 +85,7 @@ namespace M3DS {
         constexpr Colour pink        { 0xFFC0CBFF };
         constexpr Colour lime        { 0x32CD32FF };
         constexpr Colour sky_blue    { 0x87CEEBFF };
+	    constexpr Colour cerulean    { 0x007ba7FF };
         constexpr Colour transparent { 0x00000000 };
     }
 }

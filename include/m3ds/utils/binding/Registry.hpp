@@ -30,16 +30,16 @@ namespace M3DS {
 
         [[nodiscard]] static constexpr std::unique_ptr<Object> instantiate(std::string_view className);
 
-        [[nodiscard]] static std::expected<std::unique_ptr<Object>, Error> deserialise(const std::filesystem::path& path) noexcept;
-        [[nodiscard]] static std::expected<std::unique_ptr<Object>, Error> deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] static std::expected<std::unique_ptr<Object>, Failure> deserialise(const std::filesystem::path& path) noexcept;
+        [[nodiscard]] static std::expected<std::unique_ptr<Object>, Failure> deserialise(BinaryInFileAccessor file) noexcept;
 
-        [[nodiscard]] static Error serialise(const Object& object, const std::filesystem::path& path) noexcept;
-        [[nodiscard]] static Error serialise(const Object& object, BinaryOutFileAccessor file) noexcept;
+        [[nodiscard]] static Failure serialise(const Object& object, const std::filesystem::path& path) noexcept;
+        [[nodiscard]] static Failure serialise(const Object& object, BinaryOutFileAccessor file) noexcept;
 
         template <ObjectType O>
-        [[nodiscard]] static std::expected<std::unique_ptr<O>, Error> deserialise(const std::filesystem::path& path) noexcept;
+        [[nodiscard]] static std::expected<std::unique_ptr<O>, Failure> deserialise(const std::filesystem::path& path) noexcept;
         template <ObjectType O>
-        [[nodiscard]] static std::expected<std::unique_ptr<O>, Error> deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] static std::expected<std::unique_ptr<O>, Failure> deserialise(BinaryInFileAccessor file) noexcept;
 
         [[nodiscard]] static constexpr const GenericMember* getMember(std::string_view className, std::string_view memberName);
         [[nodiscard]] static constexpr BoundMethodPair getMethodPair(std::string_view className, std::string_view methodName);
@@ -51,19 +51,19 @@ namespace M3DS {
     };
 
     template <ObjectType O>
-    std::expected<std::unique_ptr<O>, Error> Registry::deserialise(const std::filesystem::path& path) noexcept {
+    std::expected<std::unique_ptr<O>, Failure> Registry::deserialise(const std::filesystem::path& path) noexcept {
         BinaryInFile file { path };
         if (!file)
-            return std::unexpected{ Error::file_open_fail };
+            return std::unexpected{ ErrorCode::file_open_fail };
         return deserialise<O>(file.getAccessor());
     }
 
     template <ObjectType O>
-    std::expected<std::unique_ptr<O>, Error> Registry::deserialise(BinaryInFileAccessor file) noexcept {
+    std::expected<std::unique_ptr<O>, Failure> Registry::deserialise(BinaryInFileAccessor file) noexcept {
         if (std::expected exp = deserialise(file)) {
             if (std::unique_ptr obj = object_pointer_cast<O>(std::move(exp.value())))
                 return obj;
-            return std::unexpected{ Error::object_cast_failed };
+            return std::unexpected{ ErrorCode::object_cast_failed };
         } else {
             return std::unexpected{ exp.error() };
         }

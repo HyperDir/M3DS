@@ -6,11 +6,12 @@ namespace M3DS {
     class Sprite2D : public Node2D {
         M_CLASS(Sprite2D, Node2D)
     public:
-        Texture texture {};
+        SpriteSheet spritesheet {};
         std::uint32_t frame {};
         bool centre = true;
 
-        explicit Sprite2D(Texture texture = Texture{}) noexcept;
+        Sprite2D() noexcept = default;
+        explicit Sprite2D(SpriteSheet sheet) noexcept;
     protected:
         void draw(RenderTarget2D& target) override;
     };

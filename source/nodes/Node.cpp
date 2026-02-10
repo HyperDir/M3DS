@@ -343,72 +343,72 @@ namespace M3DS {
             erase_if(parent->mChildren, [this](const std::unique_ptr<Node>& n) { return n.get() == this; });
     }
 
-    Error Node::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure Node::serialise(BinaryOutFileAccessor file) const noexcept {
         // TODO: serialise process enabled
-        if (const Error error = Object::serialise(file); error != Error::none)
-            return error;
+        if (const Failure failure = Object::serialise(file))
+            return failure;
 
         const std::string_view name = mName == getClass() ? std::string_view{} : mName;
 
         if (name.size() > 1024)
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         if (
             !file.write(visible) ||
             !file.write(static_cast<std::uint16_t>(name.size())) ||
             !file.write(std::span{name})
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         const auto childCountPos = file.tell();
 
         std::uint16_t childCount {};
 
         if (!file.write(static_cast<std::uint16_t>(0)))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (const std::unique_ptr<Node>& child : mChildren) {
             if (child->isHelper()) continue;
 
             ++childCount;
-            if (const Error error = child->serialise(file); error != Error::none)
-                return error;
+            if (const Failure failure = child->serialise(file))
+                return failure;
         }
 
         if (childCount > 1024)
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         if (
             !file.seek(childCountPos) ||
             !file.write(childCount) ||
             !file.seek(0, std::ios::end)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error Node::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Object::deserialise(file); error != Error::none)
-            return error;
+    Failure Node::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = Object::deserialise(file))
+            return failure;
 
         if (!file.read(visible))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         std::uint16_t nameLength;
         if (!file.read(nameLength))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         if (nameLength > 1024)
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         mName.resize(nameLength);
         if (!file.read(std::span{mName}))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         std::uint16_t childCount;
         if (!file.read(childCount))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         mChildren.reserve(mChildren.size() + childCount);
 
@@ -419,7 +419,7 @@ namespace M3DS {
                 return exp.error();
         }
 
-        return Error::none;
+        return Success;
     }
 
     const CanvasLayer* Node::getCanvasLayer() const noexcept {

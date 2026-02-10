@@ -2,7 +2,7 @@
 
 #include <m3ds/reference/Resource.hpp>
 #include <m3ds/spatial/Vector2.hpp>
-#include <m3ds/utils/Texture.hpp>
+#include <m3ds/render/Texture.hpp>
 
 namespace M3DS {
     class Font : public Resource {
@@ -29,6 +29,7 @@ namespace M3DS {
         [[nodiscard]] std::uint8_t getLineSpacing() const noexcept;
         [[nodiscard]] std::uint8_t getSpaceSize() const noexcept;
         [[nodiscard]] std::uint8_t getLetterSpacing() const noexcept;
+
         [[nodiscard]] const Glyph& getGlyph(char character) const noexcept;
         [[nodiscard]] const Texture& getTexture() const noexcept;
     private:

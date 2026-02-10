@@ -75,9 +75,9 @@ namespace M3DS {
             0x87, 0x12, 0x15, 0xF0, 0x00
         };
 
-        auto exp = Texture::load(std::span{reinterpret_cast<const std::byte*>(defaultFontTexture.data()), defaultFontTexture.size()});
+        auto exp = Texture::load(std::span{ defaultFontTexture });
         if (!exp.has_value())
-            Debug::terminate("Failed to load font with error code: {}!", std::to_underlying(exp.error()));
+            Debug::terminate("Failed to load font with error: {}!", exp.error());
 
         static std::shared_ptr defaultFont = std::make_shared<Font>(
             std::move(exp.value()),
@@ -218,9 +218,9 @@ namespace M3DS {
         return defaultFont;
     }
 
-    Error Font::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = mTexture.serialise(file); error != Error::none)
-            return error;
+    Failure Font::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = mTexture.serialise(file))
+            return failure;
 
         if (
             !file.write(mLineHeight) ||
@@ -229,14 +229,14 @@ namespace M3DS {
             !file.write(mLetterSpacing) ||
             !file.write(mGlyphs)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error Font::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = mTexture.deserialise(file); error != Error::none)
-            return error;
+    Failure Font::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = mTexture.deserialise(file))
+            return failure;
 
         if (
             !file.read(mLineHeight) ||
@@ -245,9 +245,9 @@ namespace M3DS {
             !file.read(mLetterSpacing) ||
             !file.read(mGlyphs)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
 

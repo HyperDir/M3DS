@@ -1,36 +1,36 @@
 #include <m3ds/nodes/ui/TextureRect.hpp>
 
 namespace M3DS {
-    TextureRect::TextureRect(Texture texture) noexcept
+    TextureRect::TextureRect(SpriteSheet texture) noexcept
         : mTexture(std::move(texture))
     {}
 
-    void TextureRect::setTexture(Texture texture) noexcept {
+    void TextureRect::setTexture(SpriteSheet texture) noexcept {
         mTexture = std::move(texture);
 
         queueResize();
     }
 
-    const Texture& TextureRect::getTexture() const noexcept {
+    const SpriteSheet& TextureRect::getTexture() const noexcept {
         return mTexture;
     }
 
-    Error TextureRect::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = UINode::serialise(file); error != Error::none)
-            return error;
+    Failure TextureRect::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(frame) || !file.write(centre))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         return mTexture.serialise(file);
     }
 
-    Error TextureRect::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = UINode::deserialise(file); error != Error::none)
-            return error;
+    Failure TextureRect::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(frame) || !file.read(centre))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         return mTexture.deserialise(file);
     }

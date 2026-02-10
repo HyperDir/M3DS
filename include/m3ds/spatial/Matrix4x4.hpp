@@ -824,7 +824,8 @@ namespace M3DS {
 }
 
 template <> struct std::formatter<M3DS::Matrix4x4> : std::formatter<std::string> {
-    static auto format(M3DS::Matrix4x4 matrix, format_context& ctx) {
+    template <typename FormatContext>
+    static auto format(M3DS::Matrix4x4 matrix, FormatContext& ctx) {
         return std::format_to(
             ctx.out(),
             "{{"

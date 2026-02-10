@@ -1,6 +1,6 @@
 #include <m3ds/nodes/2d/KinematicBody2D.hpp>
 
-#include "m3ds/nodes/Viewport.hpp"
+#include <m3ds/nodes/Viewport.hpp>
 
 namespace M3DS {
     void KinematicBody2D::setVelocity(const Vector2& to) noexcept {
@@ -70,9 +70,9 @@ namespace M3DS {
         setSlideOnSlope(mSerialisationData.slideOnSlope);
     }
 
-    Error KinematicBody2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = PhysicsBody2D::serialise(file); error != Error::none)
-            return error;
+    Failure KinematicBody2D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         const InternalData data {
             getVelocity(),
@@ -81,24 +81,24 @@ namespace M3DS {
         };
 
         if (!file.write(data))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error KinematicBody2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = PhysicsBody2D::deserialise(file); error != Error::none)
-            return error;
+    Failure KinematicBody2D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         InternalData data;
         if (!file.read(data))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         setVelocity(data.velocity);
         setUpDirection(data.upDirection);
         setSlideOnSlope(data.slideOnSlope);
 
-        return Error::none;
+        return Success;
     }
 
     REGISTER_METHODS(

@@ -1,9 +1,9 @@
 #include <m3ds/reference/resource/ParticleMaterial2D.hpp>
 
 namespace M3DS {
-    Error ParticleMaterial2D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = texture.serialise(file); error != Error::none)
-            return error;
+    Failure ParticleMaterial2D::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = texture.serialise(file))
+            return failure;
 
         if (
             !file.write(frame) ||
@@ -20,14 +20,14 @@ namespace M3DS {
             !file.write(scale) ||
             !file.write(globalAcceleration)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error ParticleMaterial2D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = texture.deserialise(file); error != Error::none)
-            return error;
+    Failure ParticleMaterial2D::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = texture.deserialise(file))
+            return failure;
 
         if (
             !file.read(frame) ||
@@ -44,9 +44,9 @@ namespace M3DS {
             !file.read(scale) ||
             !file.read(globalAcceleration)
         )
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return Error::none;
+        return Success;
     }
 
     REGISTER_NO_METHODS(ParticleMaterial2D);

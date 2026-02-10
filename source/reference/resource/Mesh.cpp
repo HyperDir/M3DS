@@ -8,7 +8,7 @@ namespace M3DS {
 			animations.erase(path);
 	}
 
-	std::expected<std::shared_ptr<Mesh::SkeletalAnimation>, Error> Mesh::SkeletalAnimation::load(
+	std::expected<std::shared_ptr<Mesh::SkeletalAnimation>, Failure> Mesh::SkeletalAnimation::load(
 		const std::filesystem::path& path
 	) {
 		if (const auto it = animations.find(path); it != animations.end())
@@ -19,7 +19,7 @@ namespace M3DS {
 
 		if (!file) {
 		    Debug::err("Failed to open file with path {}", path);
-		    return std::unexpected{ Error::file_open_fail };
+		    return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
 		}
 
 		return load(file.getAccessor()).transform([&](std::unique_ptr<SkeletalAnimation>&& anim) {
@@ -29,7 +29,7 @@ namespace M3DS {
 		});
 	}
 
-	std::expected<std::unique_ptr<Mesh::SkeletalAnimation>, Error> Mesh::SkeletalAnimation::load(
+	std::expected<std::unique_ptr<Mesh::SkeletalAnimation>, Failure> Mesh::SkeletalAnimation::load(
 		BinaryInFileAccessor file
 	) {
 		struct AnimationHeader {
@@ -40,17 +40,17 @@ namespace M3DS {
 
 		if (!file.read(animationHeader)) {
 		    Debug::err("Failed to read animation header!");
-		    return std::unexpected{ Error::file_read_fail };
+		    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 		}
 
 		if (animationHeader.duration <= 0.0f) {
 		    Debug::err("Invalid animation duration ({})!", animationHeader.duration);
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		if (animationHeader.nameLength > 256) {
 		    Debug::err("Unreasonable animation name length: {}!", animationHeader.nameLength);
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		auto animation = std::make_unique<SkeletalAnimation>();
@@ -60,14 +60,14 @@ namespace M3DS {
 			animationHeader.nameLength
 		})) {
 		    Debug::err("Failed to read animation name!");
-		    return std::unexpected{ Error::file_read_fail };
+		    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 		}
 
 		animation->duration = animationHeader.duration;
 
 		if (animationHeader.boneTrackCount > 1024) {
 		    Debug::err("Unreasonable bone track count: {}!", animationHeader.boneTrackCount);
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		animation->boneTracks.resize(animationHeader.boneTrackCount);
@@ -85,7 +85,7 @@ namespace M3DS {
 			} boneTrackHeader {};
 			if (!file.read(boneTrackHeader)) {
 			    Debug::err("Failed to read bone track header!");
-		        return std::unexpected{ Error::file_read_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			const std::uint32_t translationTrackSize = boneTrackHeader.translationTrackCount * (sizeof(BoneTrack::TranslationTrack::Frame) / sizeof(float));
@@ -100,14 +100,14 @@ namespace M3DS {
 			boneTrack.trackData = M3DS::make_unique_for_overwrite_nothrow<float[]>(translationTrackSize + rotationTrackSize + scaleTrackSize);
 			if (!boneTrack.trackData) {
 			    Debug::err("Failed to allocate bone track data!");
-		        return std::unexpected{ Error::allocation_failed };
+		        return std::unexpected{ Failure{ ErrorCode::allocation_failed } };
 			}
 
 			for (std::size_t i{}; i < translationTrackSize + rotationTrackSize + scaleTrackSize; ++i) {
 				float16 f16;
 				if (!file.read(f16)) {
 				    Debug::err("Failed to read bone track frame data!");
-		            return std::unexpected{ Error::file_read_fail };
+		            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 				boneTrack.trackData[i] = static_cast<float>(f16);
 			}
@@ -132,7 +132,7 @@ namespace M3DS {
 		meshes.erase(mPath);
 	}
 
-	std::expected<std::shared_ptr<Mesh>, Error> Mesh::load(std::filesystem::path path) noexcept {
+	std::expected<std::shared_ptr<Mesh>, Failure> Mesh::load(std::filesystem::path path) noexcept {
 		if (const auto it = meshes.find(path); it != meshes.end())
 			if (auto mesh = it->second.lock())
 				return mesh;
@@ -141,7 +141,7 @@ namespace M3DS {
 		BinaryInFile file { path };
 		if (!file) {
 		    Debug::err("Failed to open file {}", path);
-		    return std::unexpected{ Error::file_open_fail };
+		    return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
 		}
 
 		std::expected mesh = load(file.getAccessor());
@@ -152,7 +152,7 @@ namespace M3DS {
 		return mesh;
 	}
 
-	std::expected<std::shared_ptr<Mesh>, Error> Mesh::load(BinaryInFileAccessor file) noexcept {
+	std::expected<std::shared_ptr<Mesh>, Failure> Mesh::load(BinaryInFileAccessor file) noexcept {
 		struct MeshHeader {
 			std::array<char, 4> magic {};
 			std::uint32_t surfaceDataOffset {};
@@ -164,22 +164,22 @@ namespace M3DS {
 
 		if (!file.read(header)) {
 		    Debug::err("Failed to read Mesh header!");
-		    return std::unexpected{ Error::file_read_fail };
+		    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 		}
 
 		if (header.magic != std::array{ 'M', '3', 'D', 'S' }) {
 		    Debug::err("Invalid M3DS magic of {}", std::string_view{header.magic});
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		if (!header.surfaceDataOffset) {
 		    Debug::err("Surface Data Offset must be greater than 0!");
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		if (!header.triangleDataOffset) {
 		    Debug::err("Triangle Data Offset must be greater than 0!");
-		    return std::unexpected{ Error::file_invalid_data };
+		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 		}
 
 		struct MakeSharedEnabler : Mesh {};
@@ -196,22 +196,22 @@ namespace M3DS {
 
 			if (!file.seek(static_cast<long>(header.t3xDataOffset))) {
 			    Debug::err("Failed to seek to t3x data! at {}", header.t3xDataOffset);
-			    return std::unexpected{ Error::file_seek_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
 			}
 
 			if (!file.read(t3xDataHeader)) {
 			    Debug::err("Failed to read t3x data header!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			if (t3xDataHeader.magic != std::array{ 'T', '3', 'X', 's' }) {
 			    Debug::err("Invalid T3Xs header!");
-			    return std::unexpected{ Error::file_invalid_data };
+			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 			}
 
 			if (t3xDataHeader.t3xCount > 16) {
 			    Debug::err("Unreasonable texture count: {}!", t3xDataHeader.t3xCount);
-			    return std::unexpected{ Error::file_invalid_data };
+			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 			}
 
 			mesh->textures.resize(t3xDataHeader.t3xCount);
@@ -221,21 +221,21 @@ namespace M3DS {
 
 				if (!file.read(t3xSize)) {
 				    Debug::err("Failed to read t3x size!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
-				const auto t3xData = M3DS::make_unique_for_overwrite_nothrow<std::byte[]>(t3xSize);
+				const auto t3xData = M3DS::make_unique_for_overwrite_nothrow<unsigned char[]>(t3xSize);
 				if (!t3xData) {
 				    Debug::err("Failed to allocate t3x data!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
 				if (!file.read(std::span{t3xData.get(), t3xSize})) {
 				    Debug::err("Failed to read t3x data!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
-				auto opt = SharedRawImage::load(std::span{t3xData.get(), t3xSize});
+				auto opt = Texture::load(std::span{t3xData.get(), t3xSize});
 				if (!opt)
 					return std::unexpected{ opt.error() };
 
@@ -257,28 +257,28 @@ namespace M3DS {
 
 			if (!file.seek(static_cast<long>(header.triangleDataOffset))) {
 			    Debug::err("Failed to seek to triangle data! at {}", header.triangleDataOffset);
-		        return std::unexpected{ Error::file_seek_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
 			}
 
 			if (!file.read(triangleDataHeader)) {
 			    Debug::err("Failed to read triangle data header!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			if (triangleDataHeader.magic != std::array{ 'T', 'R', 'I', 'A' }) {
 			    Debug::err("Invalid TRIA magic!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			if (triangleDataHeader.triangleCount > 30'000) {
 			    Debug::err("Unreasonable triangle count: {}!", triangleDataHeader.triangleCount);
-			    return std::unexpected{ Error::file_invalid_data };
+			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 			}
 
 			mesh->mSurfaceData.resize(triangleDataHeader.triangleCount * sizeof(Triangle));
 			if (!file.read(std::span{mesh->mSurfaceData})) {
 			    Debug::err("Failed to read triangle data!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			const auto triangleEnd = std::chrono::high_resolution_clock::now();
@@ -296,22 +296,22 @@ namespace M3DS {
 
 			if (!file.seek(static_cast<long>(header.surfaceDataOffset))) {
 			    Debug::err("Failed to seek to surface data! at {}", header.surfaceDataOffset);
-			    return std::unexpected{ Error::file_seek_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
 			}
 
 			if (!file.read(surfaceDataHeader)) {
 			    Debug::err("Failed to read surface data header!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			if (surfaceDataHeader.magic != std::array{ 'S', 'U', 'R', 'F' }) {
 			    Debug::err("Invalid SURF magic!");
-			    return std::unexpected{ Error::file_read_fail };
+			    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			if (surfaceDataHeader.surfaceCount > 128) {
 			    Debug::err("Unreasonable surface count: {}!", surfaceDataHeader.surfaceCount);
-			    return std::unexpected{ Error::file_invalid_data };
+			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 			}
 
 			mesh->surfaces.resize(surfaceDataHeader.surfaceCount);
@@ -327,12 +327,12 @@ namespace M3DS {
 
 				if (!file.read(surfaceHeader)) {
 				    Debug::err("Failed to read surface data!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
 				if (surfaceHeader.hasTexture && surfaceHeader.textureIndex >= static_cast<int32_t>(mesh->textures.size())) {
 				    Debug::err("Invalid texture index! {}/{}", surfaceHeader.textureIndex, mesh->textures.size());
-				    return std::unexpected{ Error::file_invalid_data };
+				    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
 				}
 
 				mesh->surfaces[i] = {
@@ -359,33 +359,33 @@ namespace M3DS {
 
 			if (!file.seek(static_cast<long>(header.boneDataOffset))) {
 				Debug::err("Failed to seek to bone data!");
-		        return std::unexpected{ Error::file_seek_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
             }
 
 			if (!file.read(boneDataHeader)) {
 				Debug::err("Failed to read bone data header!");
-		        return std::unexpected{ Error::file_read_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             }
 
 			if (boneDataHeader.magic != std::array{ 'B', 'O', 'N', 'E' }) {
 				Debug::err("Invalid BONE magic!");
-		        return std::unexpected{ Error::file_invalid_data };
+		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
             }
 
 			if (boneDataHeader.boneNameDataLength > 10'000) {
 				Debug::err("Unreasonable bone name data length: {}!", boneDataHeader.boneNameDataLength);
-		        return std::unexpected{ Error::file_invalid_data };
+		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
             }
 
 			if (boneDataHeader.boneCount > 512) {
 				Debug::err("Unreasonable bone count: {}!", boneDataHeader.boneCount);
-		        return std::unexpected{ Error::file_invalid_data };
+		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
             }
 
 			mesh->mBoneNameData.resize(boneDataHeader.boneNameDataLength);
 			if (!file.read(std::span{ mesh->mBoneNameData })) {
 				Debug::err("Failed to read bone name data!");
-		        return std::unexpected{ Error::file_read_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			mesh->mBones.resize(boneDataHeader.boneCount);
@@ -393,7 +393,7 @@ namespace M3DS {
 				std::int32_t parentIndex {};
 				if (!file.read(parentIndex)) {
 				    Debug::err("Failed to read bone parent index!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
 				if (parentIndex >= 0)
@@ -406,7 +406,7 @@ namespace M3DS {
 					!file.read(bone.inverseBindMatrix)
 				) {
 				    Debug::err("Failed to read bone data!");
-				    return std::unexpected{ Error::file_read_fail };
+				    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 				}
 
 				struct BoneName {
@@ -416,17 +416,17 @@ namespace M3DS {
 
 				if (!file.read(boneName)) {
 					Debug::err("Failed to read bone name!");
-		            return std::unexpected{ Error::file_read_fail };
+		            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
                 }
 
 				if (boneName.offset >= mesh->mBoneNameData.size()) {
 					Debug::err("Invalid bone name offset {}!", boneName.offset);
-		            return std::unexpected{ Error::file_invalid_data };
+		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
                 }
 
 				if (boneName.offset + boneName.length > mesh->mBoneNameData.size()) {
 					Debug::err("Invalid bone name length {} at offset {}!", boneName.length, boneName.offset);
-		            return std::unexpected{ Error::file_invalid_data };
+		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
                 }
 
 				bone.name = { mesh->mBoneNameData.data() + boneName.offset, boneName.length };
@@ -438,7 +438,7 @@ namespace M3DS {
 				mesh->mBoneUpdateOrder.size() * sizeof(mesh->mBoneUpdateOrder[0])
 			})) {
 			    Debug::err("Failed to read bone data!");
-		        return std::unexpected{ Error::file_read_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 			}
 
 			const auto boneEnd = std::chrono::high_resolution_clock::now();
@@ -455,17 +455,17 @@ namespace M3DS {
 
 			if (!file.seek(static_cast<long>(header.animationDataOffset))) {
 				Debug::err("Failed to seek to animation data at {}!", header.animationDataOffset);
-		        return std::unexpected{ Error::file_seek_fail };
+		        return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
             }
 
 			if (!file.read(animationDataHeader)) {
 				Debug::err("Failed to read animation data header!");
-		            return std::unexpected{ Error::file_read_fail };
+		            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             }
 
 			if (animationDataHeader.magic != std::array{ 'A', 'N', 'I', 'M' }) {
 				Debug::err("Invalid ANIM magic!");
-		            return std::unexpected{ Error::file_invalid_data };
+		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
             }
 
 			for (std::uint32_t i{}; i < animationDataHeader.animationCount; ++i) {
@@ -509,7 +509,7 @@ namespace M3DS {
 		return surfaces;
 	}
 
-	std::span<const SharedRawImage> Mesh::getTextures() const noexcept {
+	std::span<const Texture> Mesh::getTextures() const noexcept {
 		return textures;
 	}
 

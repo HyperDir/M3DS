@@ -1,9 +1,9 @@
 #include <m3ds/nodes/ui/ProgressBar.hpp>
 
 namespace M3DS {
-    Error ProgressBar::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = UINode::serialise(file); error != Error::none)
-            return error;
+    Failure ProgressBar::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(fillMode) ||
@@ -13,14 +13,14 @@ namespace M3DS {
             !file.write(backgroundColour) ||
             !file.write(fillColour)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error ProgressBar::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = UINode::deserialise(file); error != Error::none)
-            return error;
+    Failure ProgressBar::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (
             !file.read(fillMode) ||
@@ -30,9 +30,9 @@ namespace M3DS {
             !file.read(backgroundColour) ||
             !file.read(fillColour)
         )
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return Error::none;
+        return Success;
     }
 
     void ProgressBar::updateMinSize() noexcept {

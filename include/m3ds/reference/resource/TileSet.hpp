@@ -1,6 +1,6 @@
 #pragma once
 
-#include <m3ds/utils/Texture.hpp>
+#include <m3ds/render/SpriteSheet.hpp>
 #include <m3ds/reference/Resource.hpp>
 
 namespace M3DS {
@@ -13,6 +13,6 @@ namespace M3DS {
         M_CLASS(TileSet, Resource)
     public:
         std::vector<Tile> tiles {};
-        Texture texture {};
+        SpriteSheet texture {};
     };
 }

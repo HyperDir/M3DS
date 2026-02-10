@@ -95,7 +95,6 @@ namespace M3DS {
                 Debug::log("M3DS Application Initialised!");
 
             C3D_Init(0x100000);
-            C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
 
             if constexpr (env.new3DSEnhancements) {
                 ptmSysmInit();
@@ -208,7 +207,6 @@ namespace M3DS {
 #ifdef __3DS__
 	        ndspExit();
 
-            C2D_Fini();
             C3D_Fini();
             gfxExit();
 

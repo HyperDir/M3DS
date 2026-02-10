@@ -62,16 +62,12 @@ namespace M3DS {
         void beforeTreeExit() override;
 
         void physicsUpdate(Seconds<float> delta) noexcept;
-
-        void display() noexcept;
     private:
         RenderTarget mTarget;
         Camera2D* mCamera2D {};
         Camera3D* mCamera3D {};
 
-#ifdef __3DS__
         LightEnv mLightEnv {};
-#endif
         std::array<const Light3D*, 8> mLights {};
 
         SPhys::PhysicsServer3D<> mPhysicsServer3D {};

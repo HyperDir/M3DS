@@ -21,10 +21,10 @@ namespace M3DS {
             ResourceRegistry::mResources.emplace(mPath = std::move(to), std::move(ptr));
     }
 
-    std::expected<std::shared_ptr<Resource>, Error> ResourceRegistry::load(std::filesystem::path path) {
+    std::expected<std::shared_ptr<Resource>, Failure> ResourceRegistry::load(std::filesystem::path path) {
         BinaryInFile file { path };
         if (!file)
-            return std::unexpected{ Error::file_open_fail };
+            return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
 
         return load(file.getAccessor()).transform(
             [&](std::shared_ptr<Resource> ptr) {
@@ -35,51 +35,51 @@ namespace M3DS {
         );
     }
 
-    std::expected<std::shared_ptr<Resource>, Error> ResourceRegistry::load(BinaryInFileAccessor file) {
+    std::expected<std::shared_ptr<Resource>, Failure> ResourceRegistry::load(BinaryInFileAccessor file) {
         std::uint8_t classNameLength;
         if (!file.read(classNameLength))
-            return std::unexpected{ Error::file_read_fail };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Debug::log("Length: {}", classNameLength);
 
         std::string className {};
         className.resize(classNameLength);
         if (!file.read(std::span{className}))
-            return std::unexpected{ Error::file_read_fail };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Debug::log<1>("Deserialising class: {}...", className);
         const auto it = mRegistry.find(className);
         if (it == mRegistry.end()) {
             Debug::err("Unable to find class {} in Registry!", className);
-            return std::unexpected{ Error::invalid_class_name };
+            return std::unexpected{ Failure{ ErrorCode::invalid_class_name } };
         }
         std::shared_ptr<Resource> ptr = it->second();
         if (!ptr) {
             Debug::err("Class {} does not have a default shared constructor in the Registry!", className);
-            return std::unexpected{ Error::non_default_constructible_class };
+            return std::unexpected{ Failure{ ErrorCode::non_default_constructible_class } };
         }
 
-        if (const Error error = ptr->deserialise(file); error != Error::none)
-            return std::unexpected{ error };
+        if (const Failure failure = ptr->deserialise(file))
+            return std::unexpected{ failure };
 
         return { std::move(ptr) };
     }
 
-    Error ResourceRegistry::save(const Resource& resource) noexcept {
+    Failure ResourceRegistry::save(const Resource& resource) noexcept {
         if (resource.mPath.empty())
-            return Error::no_resource_path;
+            return Failure{ ErrorCode::no_resource_path };
 
         if (BinaryOutFile file { resource.mPath })
             return resource.serialise(file.getAccessor());
 
-        return Error::file_open_fail;
+        return Failure{ ErrorCode::file_open_fail };
     }
 
-    Error Resource::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure Resource::serialise(BinaryOutFileAccessor file) const noexcept {
         return SuperType::serialise(file);
     }
 
-    Error Resource::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure Resource::deserialise(BinaryInFileAccessor file) noexcept {
         return SuperType::deserialise(file);
     }
 

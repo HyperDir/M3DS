@@ -1,7 +1,9 @@
 #pragma once
 
 #include <m3ds/nodes/Node.hpp>
+
 #include <m3ds/utils/Frame.hpp>
+#include <m3ds/utils/FrameTimer.hpp>
 
 namespace M3DS {
     enum class Draw : std::uint8_t {

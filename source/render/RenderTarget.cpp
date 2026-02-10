@@ -1,5 +1,4 @@
-// ReSharper disable CppMemberFunctionMayBeConst
-// ReSharper disable CppMemberFunctionMayBeStatic
+#include <cassert>
 #include <m3ds/render/RenderTarget.hpp>
 
 #include <cmath>
@@ -9,23 +8,30 @@
 #include <cstring>
 
 namespace M3DS {
-    constinit std::array vshader = std::to_array<unsigned char>({
-#embed <vshader.bin>
+    constinit std::array shader3d = std::to_array<unsigned char>({
+#embed <3dshader.bin>
+    });
+
+    constinit std::array shader2d = std::to_array<unsigned char>({
+#embed <2dshader.bin>
     });
 }
 
-#ifdef M3DS_SFML
-#include <GL/glew.h>
-#endif
-
 namespace M3DS {
-#ifdef __3DS__
-    ShaderProgram RenderTarget3D::program { std::span{vshader} };
+    ShaderProgram RenderTarget3D::program { std::span{ shader3d } };
     
     std::int8_t RenderTarget3D::uLoc_projection = program.getUniformLocation("projection");
     std::int8_t RenderTarget3D::uLoc_modelView = program.getUniformLocation("modelView");
     std::int8_t RenderTarget3D::uLoc_bones = program.getUniformLocation("bones");
 
+
+    ShaderProgram RenderTarget2D::program { std::span{ shader2d } };
+
+    std::int8_t RenderTarget2D::uLoc_projection = program.getUniformLocation("projection");
+    std::int8_t RenderTarget2D::uLoc_modelView = program.getUniformLocation("modelView");
+}
+
+namespace M3DS {
     RenderTarget::RenderTarget(const Screen screen, const bool stereoscopic3d) noexcept
         : mScreen(screen)
     {
@@ -118,418 +124,433 @@ namespace M3DS {
 
     RenderTarget2D::RenderTarget2D(C3D_RenderTarget* target) noexcept : mTarget(target) {}
 
+    RenderTarget2D::~RenderTarget2D() noexcept {
+        disablePrimitive();
+        mScratchBuffer.swap();
+    }
+
     Vector2i RenderTarget2D::getSize() const {
         return { mTarget->screen == GFX_TOP ? 400 : 320, 240 };
     }
 
-    void RenderTarget2D::prepare() noexcept {
-        C2D_Prepare();
-        C2D_SceneBegin(mTarget);
+    void RenderTarget2D::enablePrimitive() noexcept {
+        if (mPrimitive)
+            return;
+
+        program.updateUniform(uLoc_modelView, mCameraInverse);
+        setTint(Colours::white);
+        mPrimitive = true;
     }
 
-    void RenderTarget2D::clear() noexcept {
-        C2D_TargetClear(mTarget, 0);
+    void RenderTarget2D::disablePrimitive() noexcept {
+        if (!mPrimitive)
+            return;
+
+        primitiveFlush();
+
+        mPrimitive = false;
+        setTint(Colours::white);
+    }
+
+    void RenderTarget2D::primitiveSendVertex(const Vertex2D& vertex) noexcept {
+        if (Failure failure = mScratchBuffer.emplace(vertex))
+            Debug::err(failure);
+    }
+
+    void RenderTarget2D::primitiveFlush() noexcept {
+        assert(mPrimitive && "Must be in primitive mode to flush!");
+
+        if (const std::span buf = mScratchBuffer.getCurrentSpan(); !buf.empty()) {
+            C3D_BufInfo* bufInfo = C3D_GetBufInfo();
+            BufInfo_Init(bufInfo);
+            BufInfo_Add(bufInfo, buf.data(), sizeof(Vertex2D), 3, 0x210);
+
+            C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(buf.size()));
+            mScratchBuffer.startNewSpan();
+        }
+    }
+
+    void RenderTarget2D::bind(C3D_Tex* texture) noexcept {
+        if (mBoundTexture == texture)
+            return;
+
+        if (mPrimitive)
+            primitiveFlush();
+
+        mBoundTexture = texture;
+
+        if (texture) {
+ 		    C3D_TexEnv* env = C3D_GetTexEnv(0);
+		    C3D_TexEnvInit(env);
+            C3D_TexEnvSrc(env, C3D_RGB, GPU_TEXTURE0, GPU_PRIMARY_COLOR);
+            C3D_TexEnvSrc(env, C3D_Alpha, GPU_TEXTURE0);
+
+            C3D_TexBind(0, texture);
+        } else {
+            C3D_TexEnvSrc(C3D_GetTexEnv(0), C3D_Both, GPU_PRIMARY_COLOR);
+        }
+    }
+
+    void RenderTarget2D::setTint(const Colour colour) noexcept {
+        if (mTintColour == colour)
+            return;
+
+        if (mPrimitive)
+            primitiveFlush();
+
+        mTintColour = colour;
+        C3D_TexEnvColor(C3D_GetTexEnv(1), mTintColour.convertForGPU());
+    }
+
+    void RenderTarget2D::draw(const Triangle2D& triangle, C3D_Tex* texture) noexcept {
+        bind(texture);
+
+        enablePrimitive();
+        for (const auto& v : triangle)
+            primitiveSendVertex(v);
+    }
+
+    void RenderTarget2D::draw(const Quad2D& quad, C3D_Tex* texture) noexcept {
+        bind(texture);
+
+        enablePrimitive();
+        primitiveSendVertex(quad[0]);
+        primitiveSendVertex(quad[1]);
+        primitiveSendVertex(quad[2]);
+        primitiveSendVertex(quad[1]);
+        primitiveSendVertex(quad[2]);
+        primitiveSendVertex(quad[3]);
+    }
+
+    void RenderTarget2D::draw(const Mesh2D& mesh) noexcept {
+        disablePrimitive();
+
+        const Matrix4x4 modelView = mCameraInverse * mesh.transform;
+
+        program.updateUniform(uLoc_modelView, modelView);
+
+        C3D_BufInfo* bufInfo = C3D_GetBufInfo();
+        BufInfo_Init(bufInfo);
+        BufInfo_Add(bufInfo, mesh.vertices.data(), sizeof(Vertex2D), 3, 0x210);
+
+        bind(mesh.texture.getNative());
+        setTint(mesh.tint);
+
+        C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(mesh.vertices.size()));
+    }
+
+    void RenderTarget2D::drawTextureFrame(
+        const SpriteSheet& spriteSheet,
+        const Transform2D& transform,
+        const uint32_t frame,
+        const bool centre
+    ) noexcept {
+        const float sinTheta = std::sin(transform.rotation);
+        const float cosTheta = std::cos(transform.rotation);
+
+        const Pixels<Vector2>& position = transform.position;
+        const Vector2& scale = transform.scale;
+        const Pixels<Vector2>& size = spriteSheet.getFrameSize() * scale;
+        const UVs& uvs = spriteSheet.getFrame(frame);
+
+        Vector2 min {};
+        Vector2 max {};
+
+        if (centre) {
+            const Vector2 halfSize = size * 0.5f;
+            min = -halfSize;
+            max = halfSize;
+        } else {
+            min = {};
+            max = size;
+        }
+
+        auto transformVertex = [&](const float localX, const float localY) {
+            return Vector2{
+                localX * cosTheta - localY * sinTheta + position.x,
+                localX * sinTheta + localY * cosTheta + position.y
+            };
+        };
+
+        const Vector2 topLeft = transformVertex(min.x, min.y);
+        const Vector2 bottomLeft = transformVertex(min.x, max.y);
+        const Vector2 topRight = transformVertex(max.x, min.y);
+        const Vector2 bottomRight = transformVertex(max.x, max.y);
+
+        const Quad2D quad {{
+            { { topLeft.x, topLeft.y, 0.f }, { uvs.left,  uvs.top } },
+            { { bottomLeft.x, bottomLeft.y, 0.f }, { uvs.left,  uvs.bottom } },
+            { { topRight.x, topRight.y, 0.f }, { uvs.right, uvs.top } },
+            { { bottomRight.x, bottomRight.y, 0.f }, { uvs.right, uvs.bottom } }
+        }};
+
+        draw(quad, spriteSheet.getNative());
     }
 
     void RenderTarget2D::draw(const Style& style, const Transform2D& transform, const Vector2& boxSize) {
-        style.visit([&](auto&& s) {
+        style.visit([&](const StyleInterface auto& s) {
             draw(s, transform, boxSize);
         });
     }
 
-    void RenderTarget2D::draw(
-        const BoxStyle& style,
-        const Transform2D& transform,
-        const Vector2& boxSize
-    ) {
-        const Vector2& pos = transform.position.round();
+    void RenderTarget2D::draw(const BoxStyle& style, const Transform2D& transform, const Vector2& boxSize) {
+        bind(style.texture.getNative());
+        enablePrimitive();
 
-        if (style.cornerRadius == 0 || style.cornerDetail == 0) {
-            C2D_DrawRectSolid(
-                pos.x,
-                pos.y,
-                0,
-                boxSize.x,
-                boxSize.y,
-                static_cast<std::uint32_t>(style.colour)
-            );
-            return;
-        }
-        C2D_DrawTriangle(
-            pos.x,
-            pos.y + style.cornerRadius - 1,
-            static_cast<std::uint32_t>(style.colour),
-            pos.x + boxSize.x / 2,
-            pos.y + boxSize.y / 2,
-            static_cast<std::uint32_t>(style.centreColour),
-            pos.x,
-            pos.y + boxSize.y - style.cornerRadius + 1,
-            static_cast<std::uint32_t>(style.colour),
-            0
-        );
-        C2D_DrawTriangle(
-            pos.x + style.cornerRadius,
-            pos.y,
-            static_cast<std::uint32_t>(style.colour),
-            pos.x + boxSize.x / 2,
-            pos.y + boxSize.y / 2,
-            static_cast<std::uint32_t>(style.centreColour),
-            pos.x + boxSize.x - style.cornerRadius,
-            pos.y,
-            static_cast<std::uint32_t>(style.colour),
-            0
-        );
-        C2D_DrawTriangle(
-            pos.x + boxSize.x,
-            pos.y + style.cornerRadius - 1,
-            static_cast<std::uint32_t>(style.colour),
-            pos.x + boxSize.x / 2,
-            pos.y + boxSize.y / 2,
-            static_cast<std::uint32_t>(style.centreColour),
-            pos.x + boxSize.x,
-            pos.y + boxSize.y - style.cornerRadius + 1,
-            static_cast<std::uint32_t>(style.colour),
-            0
-        );
-        C2D_DrawTriangle(
-            pos.x + style.cornerRadius,
-            pos.y + boxSize.y,
-            static_cast<std::uint32_t>(style.colour),
-            pos.x + boxSize.x / 2,
-            pos.y + boxSize.y / 2,
-            static_cast<std::uint32_t>(style.centreColour),
-            pos.x + boxSize.x - style.cornerRadius,
-            pos.y + boxSize.y,
-            static_cast<std::uint32_t>(style.colour),
-            0
-        );
+        const float sinTheta = std::sin(transform.rotation);
+        const float cosTheta = std::cos(transform.rotation);
 
-        Vector2 prevAngles { style.cornerRadius, 0 };
-        const Vector2 centre = Vector2(pos) + boxSize / 2.f;
-        for (int i = 1; i <= style.cornerDetail; ++i) {
-            const float angle = std::numbers::pi_v<float> / 2.f * static_cast<float>(i) / static_cast<float>(style.cornerDetail);
+        const Pixels<Vector2>& position = transform.position;
+        const Vector2& scale = transform.scale;
+        const Pixels<Vector2>& size = boxSize * scale;
 
-            const Vector2 angles = Vector2(1-std::sin(angle), 1-std::cos(angle)) * (style.cornerRadius - 1);
+        const auto transformVertex = [&](const float localX, const float localY) {
+            return Vector2{
+                localX * cosTheta - localY * sinTheta + position.x,
+                localX * sinTheta + localY * cosTheta + position.y
+            };
+        };
 
-            C2D_DrawTriangle(
-                pos.x + angles.x,
-                pos.y + angles.y,
-                static_cast<std::uint32_t>(style.colour),
-                centre.x,
-                centre.y,
-                static_cast<std::uint32_t>(style.centreColour),
-                pos.x + prevAngles.x,
-                pos.y + prevAngles.y,
-                static_cast<std::uint32_t>(style.colour),
-                0
-            );
+        const Vector2 topLeft = transformVertex(0, 0);
+        const Vector2 bottomLeft = transformVertex(0, size.y);
+        const Vector2 topRight = transformVertex(size.x, 0);
+        const Vector2 bottomRight = transformVertex(size.x, size.y);
 
-            C2D_DrawTriangle(
-                pos.x + boxSize.x - angles.x,
-                pos.y + angles.y,
-                static_cast<std::uint32_t>(style.colour),
-                centre.x,
-                centre.y,
-                static_cast<std::uint32_t>(style.centreColour),
-                pos.x + boxSize.x - prevAngles.x,
-                pos.y + prevAngles.y,
-                static_cast<std::uint32_t>(style.colour),
-                0
-            );
+        const Vector2 horizUnit = Vector2{style.texture.getSize().x * scale.x, 0.f }.rotated(sinTheta, cosTheta);
+        const Vector2 vertUnit = Vector2{0.f, style.texture.getSize().y * scale.y }.rotated(sinTheta, cosTheta);
 
-            C2D_DrawTriangle(
-                pos.x + angles.x,
-                pos.y + boxSize.y - angles.y,
-                static_cast<std::uint32_t>(style.colour),
-                centre.x,
-                centre.y,
-                static_cast<std::uint32_t>(style.centreColour),
-                pos.x + prevAngles.x,
-                pos.y + boxSize.y - prevAngles.y,
-                static_cast<std::uint32_t>(style.colour),
-                0
-            );
+        const auto toVec3 = [](Vector2 vec) -> Vector3 {
+            return { vec.x, vec.y, 0.f };
+        };
 
-            C2D_DrawTriangle(
-                pos.x + boxSize.x - angles.x,
-                pos.y + boxSize.y - angles.y,
-                static_cast<std::uint32_t>(style.colour),
-                centre.x,
-                centre.y,
-                static_cast<std::uint32_t>(style.centreColour),
-                pos.x + boxSize.x - prevAngles.x,
-                pos.y + boxSize.y - prevAngles.y,
-                static_cast<std::uint32_t>(style.colour),
-                0
-            );
+        const UVs& uvs = style.texture.getUvs();
 
-            prevAngles = angles;
-        }
+        // Multiply by 0.9999f to avoid black areas on edge in non-power of 2 textures
+        const std::array<Vector2, 4> texcoords {{
+            { uvs.left, uvs.top },
+            { uvs.right * 0.9999f, uvs.top },
+            { uvs.left, uvs.bottom },
+            { uvs.right * 0.9999f, uvs.bottom }
+        }};
+
+        const std::array<Vertex2D, 16> vertices {{
+            { toVec3(topLeft), texcoords[0], style.colour },
+            { toVec3(topLeft + horizUnit), texcoords[1], style.colour},
+            {toVec3(topLeft + vertUnit), texcoords[2], style.colour },
+            { toVec3(topLeft + vertUnit + horizUnit), texcoords[3], style.colour },
+            { toVec3(topRight), texcoords[0], style.colour },
+            { toVec3(topRight - horizUnit), texcoords[1], style.colour },
+            { toVec3(topRight + vertUnit), texcoords[2], style.colour },
+            { toVec3(topRight + vertUnit - horizUnit), texcoords[3], style.colour },
+
+            { toVec3(bottomLeft), texcoords[0], style.colour },
+            { toVec3(bottomLeft + horizUnit), texcoords[1], style.colour},
+            {toVec3(bottomLeft - vertUnit), texcoords[2], style.colour },
+            { toVec3(bottomLeft - vertUnit + horizUnit), texcoords[3], style.colour },
+            { toVec3(bottomRight), texcoords[0], style.colour },
+            { toVec3(bottomRight - horizUnit), texcoords[1], style.colour },
+            { toVec3(bottomRight - vertUnit), texcoords[2], style.colour },
+            { toVec3(bottomRight - vertUnit - horizUnit), texcoords[3], style.colour },
+        }};
+
+        // Top Left Corner
+        primitiveSendVertex(vertices[0]);
+        primitiveSendVertex(vertices[1]);
+        primitiveSendVertex(vertices[2]);
+        primitiveSendVertex(vertices[2]);
+        primitiveSendVertex(vertices[1]);
+        primitiveSendVertex(vertices[3]);
+
+        // Top Right Corner
+        primitiveSendVertex(vertices[4]);
+        primitiveSendVertex(vertices[5]);
+        primitiveSendVertex(vertices[6]);
+        primitiveSendVertex(vertices[6]);
+        primitiveSendVertex(vertices[5]);
+        primitiveSendVertex(vertices[7]);
+
+        // Bottom Left Corner
+        primitiveSendVertex(vertices[8]);
+        primitiveSendVertex(vertices[9]);
+        primitiveSendVertex(vertices[10]);
+        primitiveSendVertex(vertices[10]);
+        primitiveSendVertex(vertices[9]);
+        primitiveSendVertex(vertices[11]);
+
+        // Bottom Right Corner
+        primitiveSendVertex(vertices[12]);
+        primitiveSendVertex(vertices[13]);
+        primitiveSendVertex(vertices[14]);
+        primitiveSendVertex(vertices[14]);
+        primitiveSendVertex(vertices[13]);
+        primitiveSendVertex(vertices[15]);
+
+        // Top Bar
+        primitiveSendVertex(vertices[1]);
+        primitiveSendVertex(vertices[5]);
+        primitiveSendVertex(vertices[3]);
+        primitiveSendVertex(vertices[3]);
+        primitiveSendVertex(vertices[5]);
+        primitiveSendVertex(vertices[7]);
+
+        // Bottom Bar
+        primitiveSendVertex(vertices[9]);
+        primitiveSendVertex(vertices[13]);
+        primitiveSendVertex(vertices[11]);
+        primitiveSendVertex(vertices[11]);
+        primitiveSendVertex(vertices[13]);
+        primitiveSendVertex(vertices[15]);
+
+        // Left Bar
+        primitiveSendVertex(vertices[2]);
+        primitiveSendVertex(vertices[3]);
+        primitiveSendVertex(vertices[10]);
+        primitiveSendVertex(vertices[10]);
+        primitiveSendVertex(vertices[3]);
+        primitiveSendVertex(vertices[11]);
+
+        // Right Bar
+        primitiveSendVertex(vertices[6]);
+        primitiveSendVertex(vertices[7]);
+        primitiveSendVertex(vertices[14]);
+        primitiveSendVertex(vertices[14]);
+        primitiveSendVertex(vertices[7]);
+        primitiveSendVertex(vertices[15]);
+
+        // Centre
+        primitiveSendVertex(vertices[3]);
+        primitiveSendVertex(vertices[7]);
+        primitiveSendVertex(vertices[11]);
+        primitiveSendVertex(vertices[11]);
+        primitiveSendVertex(vertices[7]);
+        primitiveSendVertex(vertices[15]);
     }
 
     void RenderTarget2D::draw(const TextureStyle& style, const Transform2D& transform, const Vector2& boxSize) {
-        drawTextureWithSize(style.texture, transform, boxSize, style.frame, false);
+        bind(style.texture.getNative());
+        enablePrimitive();
+
+        const float sinTheta = std::sin(transform.rotation);
+        const float cosTheta = std::cos(transform.rotation);
+
+        const Pixels<Vector2>& position = transform.position;
+        const Vector2& scale = transform.scale;
+        const Pixels<Vector2>& size = boxSize * scale;
+
+        const auto transformVertex = [&](const float localX, const float localY) {
+            return Vector2{
+                localX * cosTheta - localY * sinTheta + position.x,
+                localX * sinTheta + localY * cosTheta + position.y
+            };
+        };
+
+        const Vector2 topLeft = transformVertex(0, 0);
+        [[maybe_unused]] const Vector2 bottomLeft = transformVertex(0, size.y);
+        [[maybe_unused]] const Vector2 topRight = transformVertex(size.x, 0);
+        [[maybe_unused]] const Vector2 bottomRight = transformVertex(size.x, size.y);
+
+        const UVs& uvs = style.texture.getFrame(style.frame);
+
+        const auto toVec3 = [](Vector2 vec) -> Vector3 {
+            return { vec.x, vec.y, 0.f };
+        };
+
+        const std::array<Vertex2D, 4> vertices {{
+            { toVec3(topLeft), { uvs.left, uvs.top } },
+            { toVec3(topRight), { uvs.right, uvs.top } },
+            { toVec3(bottomLeft), { uvs.left, uvs.bottom } },
+            { toVec3(bottomRight), { uvs.right, uvs.bottom } },
+        }};
+
+        primitiveSendVertex(vertices[0]);
+        primitiveSendVertex(vertices[1]);
+        primitiveSendVertex(vertices[2]);
+        primitiveSendVertex(vertices[2]);
+        primitiveSendVertex(vertices[1]);
+        primitiveSendVertex(vertices[3]);
+    }
+
+    void RenderTarget2D::drawRectSolid(const Transform2D& transform, Vector2 size, const Colour colour) {
+        const float sinTheta = std::sin(transform.rotation);
+        const float cosTheta = std::cos(transform.rotation);
+
+        size *= transform.scale;
+
+        const auto transformVertex = [&](const float localX, const float localY) {
+            return Vector2{
+                localX * cosTheta - localY * sinTheta + transform.position.x,
+                localX * sinTheta + localY * cosTheta + transform.position.y
+            };
+        };
+
+        const Vector2 topLeft = transformVertex(0, 0);
+        const Vector2 bottomLeft = transformVertex(0, size.y);
+        const Vector2 topRight = transformVertex(size.x, 0);
+        const Vector2 bottomRight = transformVertex(size.x, size.y);
+
+        const Quad2D quad {{
+            { { topLeft.x, topLeft.y, 0.f }, {}, colour },
+            { { bottomLeft.x, bottomLeft.y, 0.f }, {}, colour },
+            { { topRight.x, topRight.y, 0.f }, {}, colour },
+            { { bottomRight.x, bottomRight.y, 0.f }, {}, colour }
+        }};
+
+        draw(quad);
+    }
+
+    void RenderTarget2D::prepare() noexcept {
+        C3D_FrameDrawOn(mTarget);
+        program.bind();
+
+        // Configure attributes for use with the vertex shader
+        C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
+        AttrInfo_Init(attrInfo);
+        AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); 		// v0=position
+        AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); 		// v1=texcoord
+        AttrInfo_AddLoader(attrInfo, 2, GPU_UNSIGNED_BYTE, 4); // v2=color
+
+        C3D_TexEnv* env0 = C3D_GetTexEnv(0);
+        C3D_TexEnvInit(env0);
+        C3D_TexEnvSrc(env0, C3D_Both, GPU_TEXTURE0);
+        C3D_TexEnvFunc(env0, C3D_Both, GPU_MODULATE);
+
+        C3D_TexEnv* env1 = C3D_GetTexEnv(1);
+        C3D_TexEnvInit(env1);
+        C3D_TexEnvSrc(env1, C3D_Both, GPU_PREVIOUS, GPU_CONSTANT);
+        C3D_TexEnvFunc(env1, C3D_Both, GPU_MODULATE);
+        C3D_TexEnvColor(env1, mTintColour.convertForGPU());
+
+        C3D_TexEnv* env2 = C3D_GetTexEnv(2);
+        C3D_TexEnvInit(env2);
+        C3D_TexEnvSrc(env2, C3D_Both, GPU_PREVIOUS, GPU_PRIMARY_COLOR);
+        C3D_TexEnvFunc(env2, C3D_Both, GPU_MODULATE);
+
+
+        C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
+
+        C3D_TexBind(0, nullptr);
+        mBoundTexture = nullptr;
+
+        C3D_CullFace(GPU_CULL_NONE);
+
+		program.updateUniform(uLoc_projection, mProjection);
+    }
+
+    void RenderTarget2D::clear() noexcept {
+        C3D_RenderTargetClear(mTarget, C3D_CLEAR_ALL, Colours::black.convertForFrameBuf(), 0);
     }
 
     void RenderTarget2D::clearCamera() noexcept {
-        C2D_ViewReset();
         mCameraPos = {};
-    }
-
-    void RenderTarget2D::drawImage(
-        const C2D_Image& image,
-        const Transform2D& transform,
-        const bool centre
-    ) {
-        const Vector2 scaledSize = Vector2(image.subtex->width, image.subtex->height) * transform.scale;
-        const Vector2 centrePos = centre ? scaledSize / 2.f : Vector2(0);
-
-        // if (screenPos.x - scaledSize.x >= static_cast<float>(getSize().x)) return;
-        // if (screenPos.x + scaledSize.x < 0) return;
-        //
-        // if (screenPos.y - scaledSize.y >= static_cast<float>(getSize().y)) return;
-        // if (screenPos.y + scaledSize.y < 0) return;
-
-        // if (centre) {
-        //     screenPos -= scaledSize / 2.f;
-        // }
-
-        const C2D_DrawParams params = {
-            {
-                std::round(transform.position.x),
-                std::round(transform.position.y),
-
-                scaledSize.x,
-                scaledSize.y
-            },
-            {
-                centrePos.x,
-                centrePos.y
-            },
-            0,
-            transform.rotation
-        };
-
-        // Debug::log("Drawing at {} {}", centrePos.x, centrePos.y);
-        // Debug::log("UVs: {} {} {} {}", image.subtex->left, image.subtex->top, image.subtex->right, image.subtex->bottom);
-
-        C2D_DrawImage(image, &params);
-    }
-
-    void RenderTarget2D::drawTextureFrame(
-        const Texture& texture,
-        const Transform2D& transform,
-        const std::uint32_t frame,
-        const bool centre
-    ) {
-        C2D_Image image = C2D_SpriteSheetGetImage(texture.mRawImage.getNativeHandle(), 0);
-
-        const UVs& uvs = texture.getFrame(frame);
-        const Tex3DS_SubTexture subTex = {
-            .width  = static_cast<std::uint16_t>(texture.mFrameSize.x),
-            .height = static_cast<std::uint16_t>(texture.mFrameSize.y),
-            .left   = uvs.left,
-            .top    = uvs.top,
-            .right  = uvs.right,
-            .bottom = uvs.bottom
-        };
-        image.subtex = &subTex;
-
-        drawImage(image, transform, centre);
-    }
-
-    void RenderTarget2D::drawTextureSection(
-        const Texture& texture,
-        const Transform2D& transform,
-        const Rect2& drawSection,
-        const bool centre
-    ) {
-        C2D_Image image = C2D_SpriteSheetGetImage(texture.mRawImage.getNativeHandle(), 0);
-        Tex3DS_SubTexture subTex = *image.subtex;
-        image.subtex = &subTex;
-
-        const Vector2 pixelUVSize = Vector2(subTex.right - subTex.left, subTex.top - subTex.bottom) / Vector2(texture.mRawImage.getSize());
-
-        subTex.left += pixelUVSize.x * drawSection.position.x;
-        subTex.right = subTex.left + pixelUVSize.x * drawSection.size.x;
-        subTex.top -= pixelUVSize.y * drawSection.position.y;
-        subTex.bottom = subTex.top - pixelUVSize.y * drawSection.size.y;
-
-        subTex.width = static_cast<std::uint16_t>(drawSection.size.x);
-        subTex.height = static_cast<std::uint16_t>(drawSection.size.y);
-
-        drawImage(image, transform, centre);
-    }
-
-    void RenderTarget2D::drawTexture(
-        const Texture& texture,
-        const Transform2D& transform,
-        const bool centre
-    ) {
-        drawTextureFrame(texture, transform, 0, centre);
-    }
-
-    void RenderTarget2D::drawTextureWithSize(
-        const Texture& texture,
-        const Transform2D& transform,
-        const Vector2& size,
-        const std::uint32_t frame,
-        const bool centre
-    ) {
-        C2D_Image image = C2D_SpriteSheetGetImage(texture.mRawImage.getNativeHandle(), 0);
-
-        const UVs uvs = texture.getFrame(frame);
-        const Tex3DS_SubTexture subTex = {
-            .width  = static_cast<std::uint16_t>(size.x),
-            .height = static_cast<std::uint16_t>(size.y),
-            .left   = uvs.left,
-            .top    = uvs.top,
-            .right  = uvs.right,
-            .bottom = uvs.bottom
-        };
-        image.subtex = &subTex;
-
-        drawImage(image, transform, centre);
-    }
-
-    void RenderTarget2D::drawCircle(
-        const Transform2D& transform,
-        const float radius,
-        const Colour colour
-    ) {
-        C2D_DrawCircleSolid(
-            std::round(transform.position.x),
-            std::round(transform.position.y),
-            0,
-            radius,
-            static_cast<std::uint32_t>(colour)
-        );
-    }
-
-    void RenderTarget2D::drawRectSolid(
-        const Transform2D& transform,
-        const Vector2& rectangleSize,
-        const Colour colour
-    ) {
-        const Vector2 screenPos = transform.position;
-        C2D_DrawRectSolid(
-            std::round(screenPos.x),
-            std::round(screenPos.y),
-            0,
-            rectangleSize.x,
-            rectangleSize.y,
-            static_cast<std::uint32_t>(colour)
-        );
-    }
-
-    void RenderTarget2D::drawRect(
-        const Transform2D& transform,
-        const Vector2& rectangleSize,
-        const Colour colour
-    ) {
-        const Vector2 screenPos = transform.position;
-        C2D_DrawRectangle(
-            std::round(screenPos.x),
-            std::round(screenPos.y),
-            0,
-            rectangleSize.x,
-            rectangleSize.y,
-            static_cast<std::uint32_t>(colour),
-            static_cast<std::uint32_t>(colour),
-            static_cast<std::uint32_t>(colour),
-            static_cast<std::uint32_t>(colour)
-        );
-    }
-
-    void RenderTarget2D::drawRect(
-        const Transform2D& transform,
-        const Vector2& rectangleSize,
-        const std::span<Colour, 4> colours
-    ) {
-        C2D_DrawRectangle(
-            std::round(transform.position.x),
-            std::round(transform.position.y),
-            0,
-            rectangleSize.x,
-            rectangleSize.y,
-            static_cast<std::uint32_t>(colours[0]),
-            static_cast<std::uint32_t>(colours[1]),
-            static_cast<std::uint32_t>(colours[2]),
-            static_cast<std::uint32_t>(colours[3])
-        );
-    }
-
-    auto RenderTarget2D::drawChar(
-        const Transform2D& transform,
-        const Font& font,
-        const char c,
-        const Colour colour
-    ) -> void {
-        drawChar(transform, font, font.getGlyph(c), colour);
-    }
-
-    void RenderTarget2D::drawChar(
-        const Transform2D& transform,
-        const Font& font,
-        const Font::Glyph& glyph,
-        const Colour colour
-    ) {
-        C2D_Image image = C2D_SpriteSheetGetImage(font.getTexture().mRawImage.getNativeHandle(), 0);
-        Tex3DS_SubTexture subTex = *image.subtex;
-        image.subtex = &subTex;
-
-        subTex.left = glyph.uvs.left;
-        subTex.right = glyph.uvs.right;
-        subTex.top = glyph.uvs.top;
-        subTex.bottom = glyph.uvs.bottom;
-
-        subTex.width = static_cast<std::uint16_t>(glyph.size.x);
-        subTex.height = static_cast<std::uint16_t>(glyph.size.y);
-
-        const Vector2 scaledSize = static_cast<Vector2>(glyph.size) * transform.scale;
-
-        // if (screenPos.x - scaledSize.x >= static_cast<float>(getSize().x)) return;
-        // if (screenPos.x + scaledSize.x < 0) return;
-        //
-        // if (screenPos.y - scaledSize.y >= static_cast<float>(getSize().y)) return;
-        // if (screenPos.y + scaledSize.y < 0) return;
-
-        const C2D_DrawParams params = {
-            {
-                std::round(transform.position.x),
-                std::round(transform.position.y),
-
-                scaledSize.x,
-                scaledSize.y
-            },
-            { 0, 0 },
-            0,
-            transform.rotation
-        };
-
-        const C2D_Tint tint = { static_cast<std::uint32_t>(colour), 1.f };
-        const C2D_ImageTint imageTint = {tint, tint, tint, tint};
-        C2D_DrawImage(image, &params, &imageTint);
-    }
-
-    void RenderTarget2D::drawTexture(C3D_Tex* texture, const Transform2D& transform) {
-        Tex3DS_SubTexture subTex {
-            50,
-            50,
-            0,
-            0,
-            1,
-            1
-        };
-        const C2D_Image image = {.tex = texture, .subtex = &subTex};
-        C2D_DrawImageAt(image, transform.position.x, transform.position.y, 0);
+        mCameraInverse = Matrix4x4::identity();
     }
 
     void RenderTarget2D::setCameraPos(const Vector2& position) noexcept {
         mCameraPos = position.round();
-        C2D_ViewReset();
-        const Vector2i halfSize = getSize() / 2;
-        C2D_ViewTranslate(-mCameraPos->x + static_cast<float>(halfSize.x), -mCameraPos->y + static_cast<float>(halfSize.y));
+
+        const Vector2 halfSize = static_cast<Vector2>(getSize() / 2);
+
+        mCameraInverse = Matrix4x4::fromTranslation({ mCameraPos->x - halfSize.x, mCameraPos->y - halfSize.y, 0.f }).inverse();
     }
 
     const std::optional<Vector2>& RenderTarget2D::getCameraPos() const noexcept {
@@ -543,7 +564,6 @@ namespace M3DS {
     void RenderTarget2D::clearScissor() noexcept {
         mScissor = {};
 
-        C2D_Flush();
         C3D_SetScissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
     }
 
@@ -557,7 +577,6 @@ namespace M3DS {
         const std::uint32_t right = static_cast<std::uint32_t>(std::clamp(invY + static_cast<int>(rect2.size.y), 0, getSize().y));
         const std::uint32_t bottom = static_cast<std::uint32_t>(std::clamp(invX + static_cast<int>(rect2.size.x), 0, getSize().x));
 
-        C2D_Flush();
         C3D_SetScissor(
             GPU_SCISSOR_NORMAL,
             left,
@@ -577,18 +596,8 @@ namespace M3DS {
     }
 
     void RenderTarget3D::prepare(const float iod) noexcept {
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-        C3D_FrameDrawOn(mTarget);
         program.bind();
 
-        // if (mLightEnv.registerLight(light)) {
-        //     light.setColour(1, 1, 1);
-        //     light.setPosition(4, 4, 0);
-        // } else {
-        //     std::cerr << "Failed to register light" << std::endl;
-        // }
-
-        // Configure attributes for use with the vertex shader
         C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
         AttrInfo_Init(attrInfo);
         AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3);			// v0 = position
@@ -607,6 +616,8 @@ namespace M3DS {
             iod,
             3.0f
         );
+
+        C3D_CullFace(GPU_CULL_BACK_CCW);
     }
 
     void RenderTarget3D::render(const MeshInstance& meshInstance) noexcept {
@@ -614,15 +625,8 @@ namespace M3DS {
  		if (!mesh) return;
 
  		// Update the uniforms
-        {
-            C3D_FVec* const ptr = C3D_FVUnifWritePtr(GPU_VERTEX_SHADER, uLoc_projection, 4);
-            std::memcpy(ptr, &mProjection, sizeof(float) * 4 * 4);
-        }
-        {
-            C3D_FVec* const ptr = C3D_FVUnifWritePtr(GPU_VERTEX_SHADER, uLoc_modelView, 3);
-            const Matrix4x4 modelView = mCameraInverse * meshInstance.getGlobalTransform();
-            std::memcpy(ptr, &modelView, sizeof(float) * 4 * 3);
-        }
+        program.updateUniform(uLoc_projection, mProjection);
+        program.updateUniform(uLoc_modelView, mCameraInverse * meshInstance.getGlobalTransform());
 
  		C3D_TexEnv* env = C3D_GetTexEnv(0);
  		C3D_TexEnvInit(env);
@@ -658,7 +662,7 @@ namespace M3DS {
  					C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
  				}
 
- 				C3D_TexBind(0, C2D_SpriteSheetGetImage(texture->getNativeHandle(), 0).tex);
+ 				C3D_TexBind(0, texture->getNative());
  			} else {
  				if (mLightEnv.isToonShaded()) {
  					C3D_TexEnvSrc(env, C3D_Both, GPU_FRAGMENT_PRIMARY_COLOR, GPU_FRAGMENT_SECONDARY_COLOR);
@@ -669,6 +673,9 @@ namespace M3DS {
  				}
  			}
 
+ 		    C3D_TexEnvInit(C3D_GetTexEnv(1));
+            C3D_TexEnvInit(C3D_GetTexEnv(2));
+
  			mLightEnv.material(material);
  			C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(triangles.size() * 3));
  		}
@@ -677,209 +684,4 @@ namespace M3DS {
     void RenderTarget3D::setCameraPos(const Matrix4x4& transform) noexcept {
         mCameraInverse = transform.inverse();
     }
-
-#elifdef M3DS_SFML
-
-    template <typename... Args>
-    constexpr auto toCharArray(Args... args) {
-        return std::array<char, sizeof...(Args)>{ static_cast<char>(args)... };
-    }
-    constexpr std::array vShaderRaw = toCharArray(
-#embed "../vshader.glsl"
-    );
-
-    constexpr std::array fShaderRaw = toCharArray(
-#embed "../fshader.glsl"
-    );
-
-    constexpr std::string_view vShader { vShaderRaw.data(), vShaderRaw.size() };
-    constexpr std::string_view fShader { fShaderRaw.data(), fShaderRaw.size() };
-
-
-    RenderTarget::RenderTarget(sf::Window window) noexcept
-        : mWindow(std::move(window))
-    {
-        mWindow.setVerticalSyncEnabled(false);
-
-        if (const GLenum code = glewInit(); code != GLEW_OK)
-            Debug::terminate("GLEW failed to initialise! ({})", code);
-
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
-    }
-
-    sf::Window* RenderTarget::get() noexcept {
-        return &mWindow;
-    }
-
-    Vector2i RenderTarget::getSize() const {
-        const auto size = mWindow.getSize();
-        return { static_cast<int>(size.x), static_cast<int>(size.y) };
-    }
-
-    void RenderTarget::clear([[maybe_unused]] Colour colour, [[maybe_unused]] ClearFlags flags) noexcept {
-        glClearColor(colour.r, colour.g, colour.b, colour.a);
-        glClear(std::to_underlying(flags));
-    }
-
-    RenderTarget2D::RenderTarget2D(sf::Window* window) noexcept
-        : mWindow(window)
-    {}
-
-    void RenderTarget2D::drawTextureFrame(
-        [[maybe_unused]] const Texture& texture,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] std::uint32_t frame,
-        [[maybe_unused]] bool centre
-    ) {
-    }
-
-    void RenderTarget2D::drawTexture(
-        [[maybe_unused]] const Texture& texture,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] bool centre
-    ) {
-    }
-
-    void RenderTarget2D::drawTextureWithSize(
-        [[maybe_unused]] const Texture& texture,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& size,
-        [[maybe_unused]] std::uint32_t frame,
-        [[maybe_unused]] bool centre
-    ) {
-    }
-
-    void RenderTarget2D::drawTextureSection(
-        [[maybe_unused]] const Texture& texture,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Rect2& drawSection,
-        [[maybe_unused]] bool centre
-    ) {
-    }
-
-    void RenderTarget2D::drawRectSolid(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& rectangleSize,
-        [[maybe_unused]] Colour colour
-    ) {
-    }
-
-    void RenderTarget2D::drawRect(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& rectangleSize,
-        [[maybe_unused]] Colour colour
-    ) {
-    }
-
-    void RenderTarget2D::drawRect(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& rectangleSize,
-        [[maybe_unused]] std::span<Colour, 4> colours
-    ) {
-    }
-
-    void RenderTarget2D::drawCircle(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] float radius,
-        [[maybe_unused]] Colour colour
-    ) {
-    }
-
-    void RenderTarget2D::drawChar(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Font& font,
-        [[maybe_unused]] char c,
-        [[maybe_unused]] Colour colour
-    ) {
-    }
-
-    void RenderTarget2D::drawChar(
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Font& font,
-        [[maybe_unused]] const Font::Glyph& glyph,
-        [[maybe_unused]] Colour colour
-    ) {
-    }
-
-    void RenderTarget2D::prepare() noexcept {
-    }
-
-    Vector2i RenderTarget2D::getSize() const {
-        auto size = mWindow->getSize();
-
-        return { static_cast<int>(size.x), static_cast<int>(size.y) };
-    }
-
-    void RenderTarget2D::clear() noexcept {
-    }
-
-    void RenderTarget2D::draw(
-        [[maybe_unused]] const Style& style,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& boxSize
-    ) {
-    }
-
-    void RenderTarget2D::draw(
-        [[maybe_unused]] const BoxStyle& style,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& boxSize
-    ) {
-    }
-
-    void RenderTarget2D::draw(
-        [[maybe_unused]] const TextureStyle& style,
-        [[maybe_unused]] const Transform2D& transform,
-        [[maybe_unused]] const Vector2& boxSize
-    ) {
-    }
-
-    void RenderTarget2D::clearCamera() noexcept {
-    }
-
-    void RenderTarget2D::setCameraPos([[maybe_unused]] const Vector2& position) noexcept {
-    }
-
-    const std::optional<Vector2>& RenderTarget2D::getCameraPos() const noexcept {
-        return mCameraPos;
-    }
-
-    void RenderTarget2D::clearScissor() noexcept {
-    }
-
-    void RenderTarget2D::setScissor([[maybe_unused]] const Rect2& rect2) noexcept {
-    }
-
-    const std::optional<Rect2>& RenderTarget2D::getScissor() const noexcept {
-        return mScissor;
-    }
-
-    RenderTarget3D::RenderTarget3D(sf::Window* window) noexcept
-        : mWindow(window)
-    {}
-
-    void RenderTarget3D::clear() noexcept {
-
-    }
-
-    void RenderTarget3D::prepare() noexcept {
-        if (!mWindow->setActive(true))
-            Debug::terminate("Failed to activate window context!");
-
-
-    }
-
-    void RenderTarget3D::render([[maybe_unused]] const MeshInstance& meshInstance) noexcept {
-    }
-
-    void RenderTarget3D::setCameraPos([[maybe_unused]] const Matrix4x4& transform) noexcept {
-    }
-
-
-#endif
 }

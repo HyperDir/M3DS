@@ -66,10 +66,10 @@ namespace M3DS {
 
         [[nodiscard]] virtual std::string_view getClassName() const noexcept = 0;
 
-        [[nodiscard]] virtual std::expected<BindableTypesVariant, Error> genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept = 0;
+        [[nodiscard]] virtual std::expected<BindableTypesVariant, ErrorCode> genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept = 0;
 
         template <typename... Args>
-        [[nodiscard]] std::expected<BindableTypesVariant, Error> autoCall(ObjectPointer object, Args&&... args) const;
+        [[nodiscard]] std::expected<BindableTypesVariant, ErrorCode> autoCall(ObjectPointer object, Args&&... args) const;
     protected:
         [[nodiscard]] virtual bool validateTypes(const MethodTypeIdentifiers& identifiers) const noexcept = 0;
     private:
@@ -83,9 +83,9 @@ namespace M3DS {
         template <std::size_t N>
         [[nodiscard]] explicit consteval Method(const char (&name)[N]) noexcept;
 
-        [[nodiscard]] std::expected<BindableTypesVariant, Error> genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept final;
+        [[nodiscard]] std::expected<BindableTypesVariant, ErrorCode> genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept final;
 
-        [[nodiscard]] virtual std::expected<std::remove_cvref_t<ReturnType>, Error> call(ObjectPointer object, PassEfficiently<Args>... args) const noexcept = 0;
+        [[nodiscard]] virtual std::expected<std::remove_cvref_t<ReturnType>, ErrorCode> call(ObjectPointer object, PassEfficiently<Args>... args) const noexcept = 0;
     protected:
         [[nodiscard]] bool validateTypes(const MethodTypeIdentifiers& identifiers) const noexcept final;
     private:
@@ -104,7 +104,7 @@ namespace M3DS {
         ) noexcept;
 
         [[nodiscard]] std::string_view getClassName() const noexcept override;
-        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> call(const Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
+        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> call(const Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
     private:
         MethodType mMethod {};
     };
@@ -120,7 +120,7 @@ namespace M3DS {
         ) noexcept;
 
         [[nodiscard]] std::string_view getClassName() const noexcept override;
-        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
+        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
     private:
         MethodType mMethod {};
     };
@@ -137,7 +137,7 @@ namespace M3DS {
         ) noexcept;
 
         [[nodiscard]] std::string_view getClassName() const noexcept override;
-        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
+        [[nodiscard]] std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept override;
     private:
         MethodType mMethod {};
     };

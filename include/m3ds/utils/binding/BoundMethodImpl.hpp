@@ -82,14 +82,14 @@ namespace M3DS {
 
     template <bool IsConst>
     template <typename ... Args>
-    std::expected<BindableTypesVariant, Error> GenericMethod<IsConst>::autoCall(ObjectPointer object, Args&&... args) const {
+    std::expected<BindableTypesVariant, ErrorCode> GenericMethod<IsConst>::autoCall(ObjectPointer object, Args&&... args) const {
         return genericCall(object, std::initializer_list<BindableTypesVariant>{ BindableTypesVariant{args}... });
     }
 
     template <bool IsConst, BindableType ReturnType, BindableType... Args>
-    std::expected<BindableTypesVariant, Error> Method<IsConst, ReturnType, Args...>::genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept {
+    std::expected<BindableTypesVariant, ErrorCode> Method<IsConst, ReturnType, Args...>::genericCall(ObjectPointer object, std::span<const BindableTypesVariant> args) const noexcept {
         if (!validateArgumentTypes(args))
-            return std::unexpected{ Error::type_mismatch };
+            return std::unexpected{ ErrorCode::type_mismatch };
 
         return [&]<std::size_t... I>(std::index_sequence<I...>) {
             if constexpr (std::same_as<ReturnType, void>) {
@@ -135,7 +135,7 @@ namespace M3DS {
     }
 
     template <typename ClassType, typename ReturnType, typename ... Args>
-    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> ConstSpecialisedMethod<ClassType, ReturnType, Args...>::call(const Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
+    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> ConstSpecialisedMethod<ClassType, ReturnType, Args...>::call(const Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
         if (const ClassType* o = object_cast<const ClassType*>(object)) {
             if constexpr (std::same_as<ReturnType, void>) {
                 std::invoke(mMethod, o, static_cast<Args>(args)...);
@@ -144,7 +144,7 @@ namespace M3DS {
                 return { std::invoke(mMethod, o, static_cast<Args>(args)...) };
             }
         }
-        return std::unexpected{ Error::object_conversion_failure };
+        return std::unexpected{ ErrorCode::object_conversion_failure };
     }
 
     template <typename ClassType, typename ReturnType, typename... Args>
@@ -163,7 +163,7 @@ namespace M3DS {
     }
 
     template <typename ClassType, typename ReturnType, typename ... Args>
-    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> MutableSpecialisedMethod<ClassType, ReturnType, Args...>::call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
+    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> MutableSpecialisedMethod<ClassType, ReturnType, Args...>::call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
         if (ClassType* o = object_cast<ClassType*>(object)) {
             if constexpr (std::same_as<ReturnType, void>) {
                 std::invoke(mMethod, o, static_cast<Args>(args)...);
@@ -172,7 +172,7 @@ namespace M3DS {
                 return { std::invoke(mMethod, o, static_cast<Args>(args)...) };
             }
         }
-        return std::unexpected{ Error::object_conversion_failure };
+        return std::unexpected{ ErrorCode::object_conversion_failure };
     }
 
     template <typename ClassType, typename ReturnType, typename... Args>
@@ -191,7 +191,7 @@ namespace M3DS {
     }
 
     template <typename ClassType, typename ReturnType, typename ... Args>
-    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, Error> MutableWrapperForConstSpecialisedMethod<ClassType, ReturnType, Args...>::call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
+    std::expected<AdaptPointer<std::remove_cvref_t<ReturnType>>, ErrorCode> MutableWrapperForConstSpecialisedMethod<ClassType, ReturnType, Args...>::call(Object* object, PassEfficiently<AdaptPointer<Args>>... args) const noexcept {
         if (const ClassType* o = object_cast<const ClassType*>(object)) {
             if constexpr (std::same_as<ReturnType, void>) {
                 std::invoke(mMethod, o, static_cast<Args>(args)...);
@@ -200,6 +200,6 @@ namespace M3DS {
                 return { std::invoke(mMethod, o, static_cast<Args>(args)...) };
             }
         }
-        return std::unexpected{ Error::object_conversion_failure };
+        return std::unexpected{ ErrorCode::object_conversion_failure };
     }
 }

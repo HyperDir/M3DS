@@ -30,8 +30,8 @@ namespace M3DS {
         [[nodiscard]] static const GenericMember* getMemberStatic(std::string_view) noexcept;
         [[nodiscard]] virtual const GenericMember* getMember(std::string_view name) noexcept;
     protected:
-        [[nodiscard]] virtual Error serialise(BinaryOutFileAccessor file) const noexcept;
-        [[nodiscard]] virtual Error deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] virtual Failure serialise(BinaryOutFileAccessor file) const noexcept;
+        [[nodiscard]] virtual Failure deserialise(BinaryInFileAccessor file) noexcept;
     };
 
     template <typename T> concept ObjectType = std::derived_from<T, Object>;
@@ -138,8 +138,8 @@ static_assert(std::string_view{#m_class}.size() < std::numeric_limits<std::uint8
     return getMemberStatic(name);                                                                               \
 }                                                                                                               \
 protected:                                                                                                      \
-[[nodiscard]] M3DS::Error serialise(M3DS::BinaryOutFileAccessor file) const noexcept override;                  \
-[[nodiscard]] M3DS::Error deserialise(M3DS::BinaryInFileAccessor file) noexcept override;                       \
+[[nodiscard]] M3DS::Failure serialise(M3DS::BinaryOutFileAccessor file) const noexcept override;                \
+[[nodiscard]] M3DS::Failure deserialise(M3DS::BinaryInFileAccessor file) noexcept override;                     \
 private:
 
 #define REGISTER_NO_METHODS(CLASS_NAME) M3DS::BoundMethodPair CLASS_NAME::getMethodStatic(const std::string_view name) noexcept { return SuperType::getMethodStatic(name); }

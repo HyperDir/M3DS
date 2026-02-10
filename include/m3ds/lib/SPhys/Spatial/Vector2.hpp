@@ -354,7 +354,8 @@ struct std::hash<SPhys::Vec2<T>> {
 
 template <typename T>
 struct std::formatter<SPhys::Vec2<T>> : std::formatter<T> {
-    auto format(const SPhys::Vec2<T>& vec, format_context& ctx) const {
+    template <typename FormatContext>
+    auto format(const SPhys::Vec2<T>& vec, FormatContext& ctx) const {
         auto&& out = ctx.out();
 
         std::format_to(out, "(");

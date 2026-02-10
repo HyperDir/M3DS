@@ -35,30 +35,30 @@ namespace M3DS {
         updateCollisionObject(nullptr);
     }
 
-    Error Area2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = CollisionObject2D::serialise(file); error != Error::none)
-            return error;
+    Failure Area2D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
-        if (const Error error = areaEntered.serialise(file); error != Error::none)
-            return error;
+        if (const Failure failure = areaEntered.serialise(file))
+            return failure;
 
-        if (const Error error = areaExited.serialise(file); error != Error::none)
-            return error;
+        if (const Failure failure = areaExited.serialise(file))
+            return failure;
 
-        return Error::none;
+        return Success;
     }
 
-    Error Area2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = CollisionObject2D::deserialise(file); error != Error::none)
-            return error;
+    Failure Area2D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
-        if (const Error error = areaEntered.deserialise(file); error != Error::none)
-            return error;
+        if (const Failure failure = areaEntered.deserialise(file))
+            return failure;
 
-        if (const Error error = areaExited.deserialise(file); error != Error::none)
-            return error;
+        if (const Failure failure = areaExited.deserialise(file))
+            return failure;
 
-        return Error::none;
+        return Success;
     }
 
     REGISTER_METHODS(

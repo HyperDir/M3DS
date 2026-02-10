@@ -55,29 +55,29 @@ namespace M3DS {
 
         constexpr void reserve(std::size_t characters);
 
-        [[nodiscard]] Error serialise(BinaryOutFileAccessor file) const noexcept {
+        [[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept {
             if (mPath.size() > std::numeric_limits<size_t>::max())
-                return Error::file_invalid_data;
+                return Failure{ ErrorCode::file_invalid_data };
 
             if (
                 !file.write(static_cast<std::uint16_t>(mPath.size())) ||
                 !file.write(std::span{mPath})
             )
-                return Error::file_write_fail;
+                return Failure{ ErrorCode::file_write_fail };
 
-            return Error::none;
+            return Success;
         }
 
-        [[nodiscard]] Error deserialise(BinaryInFileAccessor file) noexcept {
+        [[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept {
             std::uint16_t length;
             if (!file.read(length))
-                return Error::file_read_fail;
+                return Failure{ ErrorCode::file_read_fail };
 
             mPath.resize(length);
             if (!file.read(std::span{mPath}))
-                return Error::file_read_fail;
+                return Failure{ ErrorCode::file_read_fail };
 
-            return Error::none;
+            return Success;
         }
     };
 }
@@ -195,15 +195,14 @@ struct std::hash<M3DS::NodePath> {
     }
 };
 
-template <> struct std::formatter<M3DS::NodePath> : std::formatter<std::string> {
-    static auto format(const M3DS::NodePath& path, format_context& ctx) {
-        return std::format_to(
-            ctx.out(),
-            "{}",
-            static_cast<std::string_view>(path)
-        );
+template <> struct std::formatter<M3DS::NodePath> : std::formatter<std::string_view> {
+    template <typename FormatContext>
+    auto format(const M3DS::NodePath& path, FormatContext& ctx) const {
+        return std::formatter<std::string_view>::format(std::string_view{path}, ctx);
     }
 };
+
+static_assert(std::formattable<M3DS::NodePath, char>);
 
 constexpr std::ostream& operator<<(std::ostream& stream, const M3DS::NodePath& path) {
     return stream << static_cast<std::string_view>(path);

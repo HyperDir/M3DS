@@ -1,7 +1,6 @@
 #pragma once
 
 #include <m3ds/nodes/ui/UINode.hpp>
-#include <m3ds/containers/HeapArray.hpp>
 #include <m3ds/reference/resource/Font.hpp>
 
 namespace M3DS {
@@ -14,7 +13,7 @@ namespace M3DS {
             right
         };
 
-        Colour colour = Colours::black;
+        Colour colour = Colours::white;
 
         [[nodiscard]] std::string_view getText() const noexcept;
         [[nodiscard]] const std::shared_ptr<Font>& getFont() const noexcept;
@@ -30,14 +29,9 @@ namespace M3DS {
         void updateMinSize() noexcept override;
         void resize() noexcept override;
     private:
-        struct LabelGlyph {
-            Vector2i position {};
-            const Font::Glyph* glyph {};
-        };
-
         std::string mText {};
         std::shared_ptr<Font> mFont = Font::getDefaultFont();
-        std::vector<LabelGlyph> mGlyphs {};
+        Mesh2D mMesh {};
         bool mCapitalise {};
         Justify mJustify = Justify::left;
 

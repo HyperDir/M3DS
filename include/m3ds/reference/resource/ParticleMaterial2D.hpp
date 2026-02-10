@@ -1,7 +1,7 @@
 #pragma once
 
 #include <m3ds/reference/Resource.hpp>
-#include <m3ds/utils/Texture.hpp>
+#include <m3ds/render/SpriteSheet.hpp>
 #include <m3ds/utils/Units.hpp>
 
 #include <random>
@@ -48,7 +48,7 @@ namespace M3DS {
     class ParticleMaterial2D : public Resource {
         M_CLASS(ParticleMaterial2D, Resource)
     public:
-        Texture texture {};
+        SpriteSheet texture {};
         Range<std::uint16_t> frame {};
 
         std::uint32_t count { 125 };

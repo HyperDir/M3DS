@@ -2,9 +2,10 @@
 
 #include <m3ds/types/Colour.hpp>
 #include <m3ds/types/Margin.hpp>
-#include <m3ds/utils/Texture.hpp>
+#include <m3ds/render/SpriteSheet.hpp>
 
 #include "m3ds/reference/Resource.hpp"
+#include "m3ds/render/Mesh2D.hpp"
 
 namespace M3DS {
     template <typename T>
@@ -13,39 +14,28 @@ namespace M3DS {
         { t == t } -> std::same_as<bool>;
         { t.getMinSize() } -> std::same_as<Vector2>;
         { t.contentMargin } -> std::same_as<Margin&>;
-        { t.serialise(std::declval<BinaryOutFileAccessor>()) } -> std::same_as<Error>;
-        { t.deserialise(std::declval<BinaryInFileAccessor>()) } -> std::same_as<Error>;
+        { t.serialise(std::declval<BinaryOutFileAccessor>()) } -> std::same_as<Failure>;
+        { t.deserialise(std::declval<BinaryInFileAccessor>()) } -> std::same_as<Failure>;
     };
 
     struct BoxStyle {
         Colour colour { Colours::dark_grey };
-        Colour centreColour { colour };
-        float cornerRadius = 6;
-        int cornerDetail = 4;
+        Margin contentMargin { 8, 8, 8, 8 };
 
-        Margin contentMargin { 4, 4, 4, 4 };
+        Texture texture = stretchPanelTexture;
 
-        constexpr bool operator==(const BoxStyle&) const noexcept = default;
+        [[nodiscard]] Vector2 getMinSize() const noexcept;
 
-        [[nodiscard]] constexpr Vector2 getMinSize() const noexcept {
-            return { 2 * cornerRadius, 2 * cornerRadius };
-        }
+        [[nodiscard]] bool operator==(const BoxStyle&) const noexcept = default;
 
-        [[nodiscard]] Error serialise(BinaryOutFileAccessor file) const noexcept {
-            if (!file.write(*this))
-                return Error::file_write_fail;
-            return Error::none;
-        }
-
-        [[nodiscard]] Error deserialise(BinaryInFileAccessor file) noexcept {
-            if (!file.read(*this))
-                return Error::file_read_fail;
-            return Error::none;
-        }
+        [[nodiscard]] Failure serialise(BinaryOutFileAccessor) const noexcept;
+        [[nodiscard]] Failure deserialise(BinaryInFileAccessor) noexcept;
+    private:
+        static const Texture stretchPanelTexture;
     };
 
     struct TextureStyle {
-        Texture texture {};
+        SpriteSheet texture {};
         std::uint16_t frame {};
 
         Margin contentMargin { 4, 4, 4, 4 };
@@ -56,24 +46,24 @@ namespace M3DS {
             return Vector2{ texture.getFrameSize() };
         }
 
-        [[nodiscard]] Error serialise(BinaryOutFileAccessor file) const noexcept {
-            if (const Error error = texture.serialise(file); error != Error::none)
-                return error;
+        [[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept {
+            if (const Failure failure = texture.serialise(file))
+                return failure;
 
             if (!file.write(frame) || !file.write(contentMargin))
-                return Error::file_write_fail;
+                return Failure{ ErrorCode::file_write_fail };
 
-            return Error::none;
+            return Success;
         }
 
-        [[nodiscard]] Error deserialise(BinaryInFileAccessor file) noexcept {
-            if (const Error error = texture.deserialise(file); error != Error::none)
-                return error;
+        [[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept {
+            if (const Failure failure = texture.deserialise(file))
+                return failure;
 
             if (!file.read(frame) || !file.read(contentMargin))
-                return Error::file_read_fail;
+                return Failure{ ErrorCode::file_read_fail };
 
-            return Error::none;
+            return Success;
         }
     };
 
@@ -82,28 +72,28 @@ namespace M3DS {
 
     using Style = std::variant<BoxStyle, TextureStyle>;
 
-    [[nodiscard]] inline Error serialise(const Style& style, BinaryOutFileAccessor file) noexcept {
+    [[nodiscard]] inline Failure serialise(const Style& style, BinaryOutFileAccessor file) noexcept {
         const std::uint8_t idx = static_cast<std::uint8_t>(style.index());
 
         if (!file.write(idx))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         return style.visit(
-            [&](const auto& s) -> Error {
+            [&](const auto& s) -> Failure {
                 return s.serialise(file);
             }
         );
     }
 
-    [[nodiscard]] inline Error deserialise(Style& style, BinaryInFileAccessor file) {
+    [[nodiscard]] inline Failure deserialise(Style& style, BinaryInFileAccessor file) {
         std::uint8_t idx;
         if (!file.read(idx))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         style = variantFromIndex<Style>(idx);
 
         return style.visit(
-            [&](auto& s) -> Error {
+            [&](auto& s) -> Failure {
                 return s.deserialise(file);
             }
         );

@@ -157,6 +157,9 @@ namespace M3DS {
 
 	template <typename T, std::integral SizeType, typename Allocator>
 	constexpr void HeapArray<T, SizeType, Allocator>::resize(const size_type newSize) {
+		if (mSize == newSize)
+			return;
+
 		HeapArray tmp = std::move(*this);
 
 		allocate(newSize);
@@ -166,6 +169,9 @@ namespace M3DS {
 
 	template <typename T, std::integral SizeType, typename Allocator>
 	constexpr void HeapArray<T, SizeType, Allocator>::resize(size_type newSize, T fill) {
+		if (mSize == newSize)
+			return;
+
 		HeapArray tmp = std::move(*this);
 
 		allocate(newSize);

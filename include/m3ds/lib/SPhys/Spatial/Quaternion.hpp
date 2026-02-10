@@ -194,7 +194,8 @@ namespace SPhys {
 
 template <typename T>
 struct std::formatter<SPhys::Quat<T>> : std::formatter<T> {
-    auto format(const SPhys::Quat<T>& quat, format_context& ctx) const {
+    template <typename FormatContext>
+    auto format(const SPhys::Quat<T>& quat, FormatContext& ctx) const {
         auto&& out = ctx.out();
 
         std::format_to(out, "(");

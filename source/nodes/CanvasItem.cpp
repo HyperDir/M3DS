@@ -74,24 +74,24 @@ namespace M3DS {
         return getGlobalTransform().position;
     }
 
-    Error CanvasItem::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node::serialise(file); error != Error::none)
-            return error;
+    Failure CanvasItem::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(mTransform))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error CanvasItem::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node::deserialise(file); error != Error::none)
-            return error;
+    Failure CanvasItem::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(mTransform))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return Error::none;
+        return Success;
     }
 
     void CanvasItem::afterTreeEnter() {

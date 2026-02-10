@@ -19,22 +19,22 @@ namespace M3DS {
         return false;
     }
 
-    Error Camera2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node2D::serialise(file); error != Error::none)
-            return error;
+    Failure Camera2D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(isActive()))
-            return Error::file_write_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_write_fail };
+        return Success;
     }
 
-    Error Camera2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node2D::deserialise(file); error != Error::none)
-            return error;
+    Failure Camera2D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(mQueuedActive))
-            return Error::file_read_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_read_fail };
+        return Success;
     }
 
     void Camera2D::afterTreeEnter() {
@@ -45,134 +45,6 @@ namespace M3DS {
             enable();
         }
     }
-
-    /*
-    void Camera2D::draw(RenderTarget2D& target) noexcept {
-        Node2D::draw(target);
-
-        constexpr auto fromColour = Colours::green;
-        constexpr auto toColour = Colours::turquoise;
-        constexpr auto centreColour = Colours::white;
-
-        const auto halfSize = static_cast<Vector2>(target.getSize() / 4);
-        const Vector2 centre = getGlobalTransform().position;
-
-        const float left = centre.x - halfSize.x;
-        const float right = centre.x + halfSize.x;
-        const float top = centre.y - halfSize.y;
-        const float bottom = centre.y + halfSize.y;
-
-        C2D_DrawLine(
-            left,
-            top,
-            static_cast<std::uint32_t>(fromColour),
-            right,
-            top,
-            static_cast<uint32_t>(toColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            left,
-            top,
-            static_cast<std::uint32_t>(fromColour),
-            left,
-            bottom,
-            static_cast<uint32_t>(toColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            right,
-            top,
-            static_cast<uint32_t>(toColour),
-            right,
-            bottom,
-            static_cast<std::uint32_t>(fromColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            left,
-            bottom,
-            static_cast<uint32_t>(toColour),
-            right,
-            bottom,
-            static_cast<std::uint32_t>(fromColour),
-            1,
-            1
-        );
-
-        // C2D_DrawLine(
-        //     left,
-        //     top,
-        //     static_cast<std::uint32_t>(fromColour),
-        //     right,
-        //     bottom,
-        //     static_cast<uint32_t>(fromColour),
-        //     1,
-        //     1
-        // );
-        //
-        // C2D_DrawLine(
-        //     left,
-        //     bottom,
-        //     static_cast<std::uint32_t>(toColour),
-        //     right,
-        //     top,
-        //     static_cast<uint32_t>(toColour),
-        //     1,
-        //     1
-        // );
-        C2D_DrawLine(
-            left,
-            top,
-            static_cast<std::uint32_t>(fromColour),
-            centre.x,
-            centre.y,
-            static_cast<uint32_t>(centreColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            right,
-            bottom,
-            static_cast<std::uint32_t>(fromColour),
-            centre.x,
-            centre.y,
-            static_cast<uint32_t>(centreColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            left,
-            bottom,
-            static_cast<std::uint32_t>(toColour),
-            centre.x,
-            centre.y,
-            static_cast<uint32_t>(centreColour),
-            1,
-            1
-        );
-
-        C2D_DrawLine(
-            right,
-            top,
-            static_cast<std::uint32_t>(toColour),
-            centre.x,
-            centre.y,
-            static_cast<uint32_t>(centreColour),
-            1,
-            1
-        );
-
-    }
-    */
 
     void Camera2D::beforeTreeExit() {
         Node2D::beforeTreeExit();

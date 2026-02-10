@@ -1,44 +1,44 @@
 #include <m3ds/nodes/2d/Sprite2D.hpp>
 
 namespace M3DS {
-    Sprite2D::Sprite2D(Texture texture) noexcept
-        : texture(std::move(texture))
+    Sprite2D::Sprite2D(SpriteSheet sheet) noexcept
+        : spritesheet(std::move(sheet))
     {}
 
-    Error Sprite2D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node2D::serialise(file); error != Error::none)
-            return error;
+    Failure Sprite2D::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(frame) ||
             !file.write(centre)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return texture.serialise(file);
+        return spritesheet.serialise(file);
     }
 
-    Error Sprite2D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node2D::deserialise(file); error != Error::none)
-            return error;
+    Failure Sprite2D::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (
             !file.read(frame) ||
             !file.read(centre)
         )
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return texture.deserialise(file);
+        return spritesheet.deserialise(file);
     }
 
     void Sprite2D::draw(RenderTarget2D& target) {
-        if (texture) {
-            const std::uint32_t frameCount = texture.getFrameCount();
+        if (spritesheet) {
+            const std::uint32_t frameCount = spritesheet.getFrameCount();
             if (frame >= frameCount)
                 frame %= frameCount;
 
             target.drawTextureFrame(
-                texture,
+                spritesheet,
                 getGlobalTransform(),
                 frame,
                 centre

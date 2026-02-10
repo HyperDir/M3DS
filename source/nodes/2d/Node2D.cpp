@@ -1,11 +1,11 @@
 #include <m3ds/nodes/2d/Node2D.hpp>
 
 namespace M3DS {
-    Error Node2D::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure Node2D::serialise(BinaryOutFileAccessor file) const noexcept {
         return CanvasItem::serialise(file);
     }
 
-    Error Node2D::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure Node2D::deserialise(BinaryInFileAccessor file) noexcept {
         return CanvasItem::deserialise(file);
     }
 

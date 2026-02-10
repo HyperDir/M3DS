@@ -85,26 +85,26 @@ namespace M3DS {
         }
     }
 
-    Error Node3D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node::serialise(file); error != Error::none)
-            return error;
+    Failure Node3D::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(mTransform))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error Node3D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node::deserialise(file); error != Error::none)
-            return error;
+    Failure Node3D::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(mTransform))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         mGlobalTransformDirty = true;
 
-        return Error::none;
+        return Success;
     }
 
     void Node3D::setGlobalTransformDirty() noexcept {

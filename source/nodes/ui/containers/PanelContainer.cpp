@@ -12,16 +12,16 @@ namespace M3DS {
         return mStyle;
     }
 
-    Error PanelContainer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Container::serialise(file); error != Error::none)
-            return error;
+    Failure PanelContainer::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         return M3DS::serialise(mStyle, file);
     }
 
-    Error PanelContainer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Container::deserialise(file); error != Error::none)
-            return error;
+    Failure PanelContainer::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         return M3DS::deserialise(mStyle, file);
     }

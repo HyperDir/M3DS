@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <print>
 
-#include <m3ds/types/Float16.hpp>
-
 namespace M3DS::Debug {
     inline unsigned short debugLevel = 0;
 
@@ -15,29 +13,29 @@ namespace M3DS::Debug {
     }
 
     template <unsigned short level = 0>
-    void log(auto&& str) noexcept;
+    void log(std::formattable<char> auto&& str) noexcept;
 
-    template <unsigned short level = 0, typename... Args>
+    template <unsigned short level = 0, std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void log(std::format_string<Args...> str, Args&&... args) noexcept;
 
-    void warn(auto&& str) noexcept;
+    void warn(std::formattable<char> auto&& str) noexcept;
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void warn(std::format_string<Args...> str, Args&&... args) noexcept;
 
-    void err(auto&& str) noexcept;
+    void err(std::formattable<char>auto&& str) noexcept;
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void err(std::format_string<Args...> str, Args&&... args) noexcept;
 
     [[noreturn]] void terminate() noexcept;
 
-    [[noreturn]] void terminate(auto&& str) noexcept;
+    [[noreturn]] void terminate(std::formattable<char> auto&& str) noexcept;
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     [[noreturn]] void terminate(std::format_string<Args...> str, Args&&... args) noexcept;
 }
@@ -46,20 +44,20 @@ namespace M3DS::Debug {
 // Implementation
 namespace M3DS::Debug {
     template <unsigned short level>
-    void log([[maybe_unused]] auto&& str) noexcept {
+    void log(std::formattable<char> auto&& str) noexcept {
         if (debugLevel >= level)
 #ifdef __3DS__
             std::format_to(std::ostreambuf_iterator{std::cout}, "{}\n", str);
-#elifdef M3DS_SFML
+#else
             std::format_to(std::ostreambuf_iterator{std::cout}, "[Info] {}\n", str);
 #endif
     }
 
-    template <unsigned short level, typename... Args>
+    template <unsigned short level, std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void log(const std::format_string<Args...> str, Args&&... args) noexcept {
         if (debugLevel >= level) {
-#ifdef M3DS_SFML
+#ifndef __3DS__
             std::cout << "[Info] ";
 #endif
             std::format_to(std::ostreambuf_iterator{std::cout}, str, std::forward<Args>(args)...);
@@ -68,20 +66,20 @@ namespace M3DS::Debug {
     }
 
 
-    void warn([[maybe_unused]] auto&& str) noexcept {
+    void warn(std::formattable<char> auto&& str) noexcept {
 #ifdef __3DS__
         std::format_to(std::ostreambuf_iterator{std::cout}, "\x1b[33m{}\n\x1b[37m", str);
-#elifdef M3DS_SFML
+#else
         std::format_to(std::ostreambuf_iterator{std::cout}, "[Warning] {}\n\x1b[37m", str);
 #endif
     }
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void warn(const std::format_string<Args...> str, Args&&... args) noexcept {
 #ifdef __3DS__
         std::cerr << "\x1b[33m";
-#elifdef M3DS_SFML
+#else
         std::cerr << "[Warning] ";
 #endif
         std::format_to(std::ostreambuf_iterator{std::cerr}, str, std::forward<Args>(args)...);
@@ -89,21 +87,21 @@ namespace M3DS::Debug {
     }
 
 
-    void err([[maybe_unused]] auto&& str) noexcept {
+    void err(std::formattable<char> auto&& str) noexcept {
 #ifdef __3DS__
         std::format_to(std::ostreambuf_iterator{std::cerr}, "\x1b[31m{}\n\x1b[37m", str);
-#elifdef M3DS_SFML
-        std::format_to(std::ostreambuf_iterator{std::cerr}, "[Error] {}\n\x1b[37m", str);
+#else
+        std::format_to(std::ostreambuf_iterator{std::cerr}, "[ErrorCode] {}\n\x1b[37m", str);
 #endif
     }
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void err(const std::format_string<Args...> str, Args&&... args) noexcept {
 #ifdef __3DS__
         std::cerr << "\x1b[31m";
-#elifdef M3DS_SFML
-        std::cerr << "[Error] ";
+#else
+        std::cerr << "[ErrorCode] ";
 #endif
         std::format_to(std::ostreambuf_iterator{std::cerr}, str, std::forward<Args>(args)...);
         std::cerr << "\n\x1b[37m";
@@ -113,12 +111,12 @@ namespace M3DS::Debug {
         std::terminate();
     }
 
-    void terminate(auto&& str) noexcept {
+    void terminate(std::formattable<char> auto&& str) noexcept {
         err(str);
         std::terminate();
     }
 
-    template <typename... Args>
+    template <std::formattable<char>... Args>
     requires (sizeof...(Args) > 0)
     void terminate(const std::format_string<Args...> str, Args&&... args) noexcept {
         terminate(std::format(str, std::forward<Args>(args)...));

@@ -31,39 +31,39 @@ namespace M3DS {
         return mLabel;
     }
 
-    Error Button::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = MarginContainer::serialise(file); error != Error::none)
-            return error;
+    Failure Button::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(action) ||
             !file.write(mState) ||
             !file.write(mTouchActivated)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (const Style& style : mBoxStyles) {
-            if (const Error error = M3DS::serialise(style, file); error != Error::none)
-                return error;
+            if (const Failure failure = M3DS::serialise(style, file))
+                return failure;
         }
 
         return buttonPressed.serialise(file);
     }
 
-    Error Button::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = MarginContainer::deserialise(file); error != Error::none)
-            return error;
+    Failure Button::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (
             !file.read(action) ||
             !file.read(mState) ||
             !file.read(mTouchActivated)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (Style& style : mBoxStyles) {
-            if (const Error error = M3DS::deserialise(style, file); error != Error::none)
-                return error;
+            if (const Failure failure = M3DS::deserialise(style, file))
+                return failure;
         }
 
         return buttonPressed.deserialise(file);

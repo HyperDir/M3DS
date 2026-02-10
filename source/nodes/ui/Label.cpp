@@ -5,7 +5,7 @@ namespace M3DS {
         return mText;
     }
 
-    const std::shared_ptr<Font> & Label::getFont() const noexcept {
+    const std::shared_ptr<Font>& Label::getFont() const noexcept {
         return mFont;
     }
 
@@ -37,12 +37,12 @@ namespace M3DS {
         queueResize();
     }
 
-    Error Label::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = UINode::serialise(file); error != Error::none)
-            return error;
+    Failure Label::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (mText.size() > std::numeric_limits<std::uint16_t>::max())
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         const bool defaultFont = (mFont == Font::getDefaultFont());
 
@@ -53,20 +53,20 @@ namespace M3DS {
             !file.write(mJustify) ||
             !file.write(defaultFont)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         if (defaultFont)
-            return Error::none;
+            return Success;
         return M3DS::serialise(mFont.get(), file);
     }
 
-    Error Label::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = UINode::deserialise(file); error != Error::none)
-            return error;
+    Failure Label::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         std::uint16_t length;
         if (!file.read(length))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         mText.resize(length);
 
@@ -77,10 +77,10 @@ namespace M3DS {
             !file.read(mJustify) ||
             !file.read(defaultFont)
         )
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         if (defaultFont)
-            return Error::none;
+            return Success;
 
         return M3DS::deserialise(mFont, file);
     }
@@ -90,8 +90,17 @@ namespace M3DS {
     }
 
     void Label::draw(RenderTarget2D& target) {
-        for (const auto& [position, glyph] : mGlyphs)
-            target.drawChar(getGlobalTransform().offset(static_cast<Vector2>(position)), *mFont, *glyph, colour);
+        const Transform2D& transform = getGlobalTransform();
+
+        mMesh.transform = Matrix4x4::fromTRS(
+            { transform.position.x, transform.position.y, 0.f },
+            Quaternion::fromAxisAngle({0.f, 0.f, 1.f}, transform.rotation),
+            { transform.scale.x, transform.scale.y, 1.f }
+        );
+
+        mMesh.tint = colour;
+
+        target.draw(mMesh);
 
         UINode::draw(target);
     }
@@ -103,40 +112,57 @@ namespace M3DS {
             return;
 
         // Size is justification-agnostic
-        Vector2i bounding = static_cast<Vector2i>(getMinSize());
-        Vector2i cursor {};
+        Vector2 bounding = getMinSize();
+        Vector2 cursor {};
 
         for (const char c : mText) {
             if (c == '\n') {
                 cursor.x = 0;
-                cursor.y += mFont->getLineHeight() + mFont->getLineSpacing();
+                cursor.y += static_cast<float>(mFont->getLineHeight() + mFont->getLineSpacing());
             } else if (c == ' ') {
                 cursor.x += mFont->getSpaceSize();
             } else {
                 const auto& [size, uvs] = mFont->getGlyph(getFinalChar(c));
-                cursor.x += size.x + mFont->getLetterSpacing();
+                cursor.x += static_cast<float>(size.x + mFont->getLetterSpacing());
 
-                bounding = max(bounding, cursor + Vector2i{0, mFont->getLineHeight()});
+                bounding = max(bounding, cursor + Vector2{0.f, static_cast<float>(mFont->getLineHeight())});
             }
         }
 
-        mInternalMinSize = max(mInternalMinSize, static_cast<Vector2>(bounding) - Vector2{static_cast<float>(mFont->getLetterSpacing()), 0});
+        mInternalMinSize = max(mInternalMinSize, bounding - Vector2{static_cast<float>(mFont->getLetterSpacing()), 0.f});
     }
 
     void Label::resize() noexcept {
         UINode::resize();
 
-        mGlyphs.clear();
-        if (!mFont)
-            return;
+        mMesh.texture = mFont->getTexture();
 
-        mGlyphs.reserve(mText.size());
+        Vector2 cursor {};
+        const float lineHeight = static_cast<float>(mFont->getLineHeight());
+        const float lineSpacing = static_cast<float>(mFont->getLineSpacing());
+        const float letterSpacing = static_cast<float>(mFont->getLetterSpacing());
+        const float spaceSize = static_cast<float>(mFont->getSpaceSize());
 
-        Vector2i cursor {};
-        const std::uint8_t lineHeight = mFont->getLineHeight();
-        const std::uint8_t lineSpacing = mFont->getLineSpacing();
-        const std::uint8_t letterSpacing = mFont->getLetterSpacing();
-        const std::uint8_t spaceSize = mFont->getSpaceSize();
+        mMesh.vertices.resize(mText.size() * 6);
+        std::size_t i {};
+
+        std::span vertices = mMesh.vertices;
+
+        const auto generateTriPair2D = [&](const std::size_t idx, const Vector2 topLeft, const Font::Glyph& glyph) {
+            const float top = topLeft.y;
+            const float left = topLeft.x;
+            const float bottom = top + static_cast<float>(glyph.size.y);
+            const float right = left + static_cast<float>(glyph.size.x);
+
+            const std::size_t startIdx = idx * 6;
+
+            vertices[startIdx] = { {left, top, 0.f}, {glyph.uvs.left, glyph.uvs.top}};
+            vertices[startIdx + 1] = vertices[startIdx + 4] = { {right, top, 0.f}, {glyph.uvs.right, glyph.uvs.top}};
+            vertices[startIdx + 2] = vertices[startIdx + 3] = { {left, bottom, 0.f}, {glyph.uvs.left, glyph.uvs.bottom}};
+            vertices[startIdx + 5] = { {right, bottom, 0.f}, {glyph.uvs.right, glyph.uvs.bottom}};
+        };
+
+        // TODO: clear character slot for spaces/line breaks
 
         if (mJustify == Justify::left) {
             for (const char c : mText) {
@@ -147,30 +173,35 @@ namespace M3DS {
                     cursor.x += spaceSize;
                 } else {
                     const Font::Glyph& glyph = mFont->getGlyph(getFinalChar(c));
-                    mGlyphs.emplace_back(cursor, &glyph);
-                    cursor.x += glyph.size.x + letterSpacing;
+
+                    generateTriPair2D(i, cursor, glyph);
+
+                    cursor.x += static_cast<float>(glyph.size.x) + letterSpacing;
                 }
+                ++i;
             }
         } else if (mJustify == Justify::right || mJustify == Justify::centre) {
-            for (std::size_t i {}; i < mText.size(); ++i) {
+            for (; i < mText.size(); ++i) {
                 const std::size_t lineStart = i;
 
-                int lineWidth {};
+                float lineWidth {};
                 for (; mText[i] != '\n' && i < mText.size(); ++i) {
                     const char c = mText[i];
                     if (c == ' ') {
                         lineWidth += spaceSize;
                     } else {
-                        lineWidth += mFont->getGlyph(getFinalChar(c)).size.x + letterSpacing;
+                        lineWidth += static_cast<float>(mFont->getGlyph(getFinalChar(c)).size.x) + letterSpacing;
                     }
                 }
 
                 if (i != lineStart && mText[i - 1] != ' ')
                     lineWidth -= letterSpacing;
 
-                cursor.x = static_cast<int>(getSize().x) - lineWidth;
+                cursor.x = getSize().x - lineWidth;
                 if (mJustify == Justify::centre)
-                    cursor.x /= 2;
+                    cursor.x /= 2.f;
+                cursor.x = std::floor(cursor.x);
+                cursor.y = std::floor(cursor.y);
 
                 for (std::size_t j = lineStart; j < i; ++j) {
                     const char c = mText[j];
@@ -179,8 +210,9 @@ namespace M3DS {
                     } else {
                         const Font::Glyph& glyph = mFont->getGlyph(getFinalChar(c));
 
-                        mGlyphs.emplace_back(cursor, &glyph);
-                        cursor.x += glyph.size.x + letterSpacing;
+                        generateTriPair2D(j, cursor, glyph);
+
+                        cursor.x += static_cast<float>(glyph.size.x) + letterSpacing;
                     }
                 }
 

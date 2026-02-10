@@ -6,30 +6,30 @@ namespace M3DS {
             mParticles.clear();
     }
 
-    Error Particles2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node2D::serialise(file); error != Error::none)
-            return error;
+    Failure Particles2D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(oneShot))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        if (const Error error = M3DS::serialise(particleMaterial.get(), file); error != Error::none)
-            return error;
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
-        return Error::none;
+        return Success;
     }
 
-    Error Particles2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node2D::deserialise(file); error != Error::none)
-            return error;
+    Failure Particles2D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(oneShot))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        if (const Error error = M3DS::deserialise(particleMaterial, file); error != Error::none)
-            return error;
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
-        return Error::none;
+        return Success;
     }
 
     void Particles2D::update(const Seconds<float> delta) {

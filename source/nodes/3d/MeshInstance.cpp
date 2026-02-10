@@ -167,35 +167,35 @@ namespace M3DS {
         return mMesh ? mMesh->getAnimationCount() : 0;
     }
 
-    Error MeshInstance::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node3D::serialise(file); error != Error::none)
-            return error;
+    Failure MeshInstance::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         const bool hasMesh = static_cast<bool>(mMesh);
         if (!file.write(hasMesh))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
         if (hasMesh) {
-            if (const Error error = M3DS::serialise(mMesh->getPath(), file); error != Error::none)
-                return error;
+            if (const Failure failure = M3DS::serialise(mMesh->getPath(), file))
+                return failure;
 
             // TODO: Serialise current animation state?
         }
 
-        return Error::none;
+        return Success;
     }
 
-    Error MeshInstance::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node3D::deserialise(file); error != Error::none)
-            return error;
+    Failure MeshInstance::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         bool hasMesh;
         if (!file.read(hasMesh))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         if (hasMesh) {
             std::filesystem::path path;
-            if (const Error error = M3DS::deserialise(path, file); error != Error::none)
-                return error;
+            if (const Failure failure = M3DS::deserialise(path, file))
+                return failure;
 
             if (std::expected exp = Mesh::load(path))
                 mMesh = std::move(exp.value());
@@ -205,7 +205,7 @@ namespace M3DS {
             // TODO: Deserialise current animation state?
         }
 
-        return Error::none;
+        return Success;
     }
 
     void MeshInstance::updateProgress(Seconds<float> delta) noexcept {

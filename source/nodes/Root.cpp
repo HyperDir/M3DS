@@ -88,12 +88,12 @@ namespace M3DS {
         mFreeQueue.emplace(node);
     }
 
-    Error Root::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
-        return Error::root_serialisation_disabled;
+    Failure Root::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
+        return Failure{ ErrorCode::root_serialisation_disabled };
     }
 
-    Error Root::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
-        return Error::root_serialisation_disabled;
+    Failure Root::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
+        return Failure{ ErrorCode::root_serialisation_disabled };
     }
 
     void Root::treeUpdate(const Seconds<float> delta) noexcept {
@@ -123,8 +123,6 @@ namespace M3DS {
                 viewport->treeDraw3D();
             if (draw & Draw::draw_2d)
                 viewport->treeDraw2D();
-
-            viewport->display();
         }
     }
 

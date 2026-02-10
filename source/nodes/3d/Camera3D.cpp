@@ -19,22 +19,22 @@ namespace M3DS {
         return false;
     }
 
-    Error Camera3D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node3D::serialise(file); error != Error::none)
-            return error;
+    Failure Camera3D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(isActive()))
-            return Error::file_write_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_write_fail };
+        return Success;
     }
 
-    Error Camera3D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node3D::deserialise(file); error != Error::none)
-            return error;
+    Failure Camera3D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(mQueuedActive))
-            return Error::file_read_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_read_fail };
+        return Success;
     }
 
     void Camera3D::afterTreeEnter() {

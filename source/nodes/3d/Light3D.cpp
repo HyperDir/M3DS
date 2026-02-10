@@ -22,27 +22,27 @@ namespace M3DS {
         return false;
     }
 
-    Error Light3D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node3D::serialise(file); error != Error::none)
-            return error;
+    Failure Light3D::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(colour) ||
             !file.write(isActive())
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error Light3D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node3D::deserialise(file); error != Error::none)
-            return error;
+    Failure Light3D::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (!file.read(colour) || !file.read(mQueuedActive))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return Error::none;
+        return Success;
     }
 
     void Light3D::afterTreeEnter() {

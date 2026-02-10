@@ -14,16 +14,16 @@ namespace M3DS {
         return mStyle;
     }
 
-    Error Panel::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = UINode::serialise(file); error != Error::none)
-            return error;
+    Failure Panel::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         return M3DS::serialise(mStyle, file);
     }
 
-    Error Panel::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = UINode::deserialise(file); error != Error::none)
-            return error;
+    Failure Panel::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         return M3DS::deserialise(mStyle, file);
     }

@@ -3,10 +3,14 @@
 #include <cstdint>
 #include <string>
 
+#include <source_location>
+#include <format>
+#include <utility>
+
 namespace M3DS {
     using StringError = std::string;
 
-    enum class Error : std::uint16_t {
+    enum class ErrorCode : std::uint16_t {
         none = 0,
         file_open_fail,
         file_write_fail,
@@ -27,4 +31,35 @@ namespace M3DS {
         type_mismatch,
         object_conversion_failure
     };
+
+    // Perhaps strip location from release builds?
+    struct Failure {
+        ErrorCode error {};
+        std::source_location location = error == ErrorCode::none ? std::source_location{} : std::source_location::current();
+
+        [[nodiscard]] constexpr explicit operator bool() const noexcept {
+            return error != ErrorCode::none;
+        }
+    };
+
+    static constexpr Failure Success { ErrorCode::none };
 }
+
+template <>
+struct std::formatter<M3DS::Failure> : std::formatter<std::string_view> {
+    template <typename FormatContext>
+    auto format(const M3DS::Failure& failure, FormatContext& ctx) const {
+        if (failure.error == M3DS::ErrorCode::none) {
+            return std::format_to(ctx.out(), "No errors occurred");
+        }
+        return std::format_to(
+            ctx.out(),
+            "{}:{}:{} in function {} failed with error code {}!",
+            failure.location.file_name(),
+            failure.location.line(),
+            failure.location.column(),
+            failure.location.function_name(),
+            std::to_underlying(failure.error)
+        );
+    }
+};

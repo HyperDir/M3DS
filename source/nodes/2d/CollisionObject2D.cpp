@@ -53,22 +53,22 @@ namespace M3DS {
         setGlobalRotation(object->getRotation());
     }
 
-    Error serialiseCollisionShape(const SPhys::Shape2D& shape, const BinaryOutFileAccessor file) noexcept {
+    Failure serialiseCollisionShape(const SPhys::Shape2D& shape, const BinaryOutFileAccessor file) noexcept {
         if (!file.write(static_cast<std::uint8_t>(shape.index())))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
         if (!shape.visit(
             [&](const auto& s) {
                 return file.write(s);
             }
         ))
-            return Error::file_write_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_write_fail };
+        return Success;
     }
 
-    Error deserialiseCollisionShape(SPhys::Shape2D& shape, BinaryInFileAccessor file) noexcept {
+    Failure deserialiseCollisionShape(SPhys::Shape2D& shape, BinaryInFileAccessor file) noexcept {
         std::uint8_t index;
         if (!file.read(index))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         shape = variantFromIndex<SPhys::Shape2D>(index);
         if (!shape.visit(
@@ -76,28 +76,28 @@ namespace M3DS {
                 return file.read(s);
             }
         ))
-            return Error::file_read_fail;
-        return Error::none;
+            return Failure{ ErrorCode::file_read_fail };
+        return Success;
     }
 
-    Error CollisionObject2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node2D::serialise(file); error != Error::none)
-            return error;
+    Failure CollisionObject2D::serialise(const BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (!file.write(getLayer()) || !file.write(getMask()) || !file.write(isCollisionDisabled()))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         return serialiseCollisionShape(getCollisionObject()->getLocalShape(), file);
     }
 
-    Error CollisionObject2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node2D::deserialise(file); error != Error::none)
-            return error;
+    Failure CollisionObject2D::deserialise(const BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         std::uint32_t layer, mask;
         bool collisionDisabled;
         if (!file.read(layer) || !file.read(mask) || !file.read(collisionDisabled))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         if (collisionDisabled)
             disableCollision();
@@ -109,12 +109,12 @@ namespace M3DS {
 
         SPhys::Shape2D shape {};
 
-        if (const Error error = deserialiseCollisionShape(shape, file); error != Error::none)
-            return error;
+        if (const Failure failure = deserialiseCollisionShape(shape, file))
+            return failure;
 
         getCollisionObject()->setLocalShape(shape);
 
-        return Error::none;
+        return Success;
     }
 
     void CollisionObject2D::update(const Seconds<float> delta) {

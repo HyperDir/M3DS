@@ -5,11 +5,11 @@ namespace M3DS {
         : BoxContainer(false)
     {}
 
-    Error HBoxContainer::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure HBoxContainer::serialise(BinaryOutFileAccessor file) const noexcept {
         return SuperType::serialise(file);
     }
 
-    Error HBoxContainer::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure HBoxContainer::deserialise(BinaryInFileAccessor file) noexcept {
         return SuperType::deserialise(file);
     }
 

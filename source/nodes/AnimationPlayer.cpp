@@ -207,38 +207,38 @@ namespace M3DS {
         return mActive;
     }
 
-    Error AnimationPlayer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Node::serialise(file); error != Error::none)
-            return error;
+    Failure AnimationPlayer::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (mAnimations.size() > 1024)
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         if (!file.write(static_cast<std::uint16_t>(mAnimations.size())))
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
         for (const std::unique_ptr<Animation>& animation : mAnimations) {
             if (std::expected exp = animation->serialise(file); !exp.has_value()) {
                 Debug::err(exp.error());
-                return Error::file_invalid_data;
+                return Failure{ ErrorCode::file_invalid_data };
             }
         }
 
         // TODO: serialise current animation state?
 
-        return Error::none;
+        return Success;
     }
 
-    Error AnimationPlayer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Node::deserialise(file); error != Error::none)
-            return error;
+    Failure AnimationPlayer::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         std::uint16_t animationCount;
         if (!file.read(animationCount))
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
         if (animationCount > 1024)
-            return Error::file_invalid_data;
+            return Failure{ ErrorCode::file_invalid_data };
 
         mAnimations.resize(animationCount);
 
@@ -247,13 +247,13 @@ namespace M3DS {
                 animation = std::make_unique<Animation>(std::move(exp.value()));
             } else {
                 Debug::err(exp.error());
-                return Error::file_invalid_data;
+                return Failure{ ErrorCode::file_invalid_data };
             }
         }
 
         // TODO: deserialise current animation state?
 
-        return Error::none;
+        return Success;
     }
 
     void AnimationPlayer::update(const Seconds<float> delta) {

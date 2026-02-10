@@ -63,12 +63,6 @@ namespace M3DS {
         for (const auto& body : mPhysicsServer2D.getKinematicBodies())
             static_cast<CollisionObject2D*>(body.userData)->readback();
     }
-
-    void Viewport::display() noexcept {
-#ifdef M3DS_SFML
-        mTarget.mWindow.display();
-#endif
-    }
     
     void Viewport::setCamera2d(Camera2D* camera) noexcept {
         mCamera2D = camera;
@@ -99,11 +93,7 @@ namespace M3DS {
     }
 
     void Viewport::treeDraw2D() noexcept {
-#ifdef __3DS__
         RenderTarget2D target2d { mTarget.getLeft() };
-#elifdef M3DS_SFML
-        RenderTarget2D target2d { mTarget.get() };
-#endif
         target2d.prepare();
 
         if (mCamera2D)
@@ -113,7 +103,6 @@ namespace M3DS {
     }
 
     void Viewport::treeDraw3D() noexcept {
-#ifdef __3DS__
         const float iod = osGet3DSliderState() / 3;
 
         for (unsigned int i{}; i < mLights.size(); ++i) {
@@ -130,7 +119,9 @@ namespace M3DS {
         mLightEnv.bind();
 
         {
-            RenderTarget3D targetLeft { mTarget.getLeft(), mLightEnv };
+            C3D_RenderTarget* lTarget = mTarget.getLeft();
+            C3D_FrameDrawOn(lTarget);
+            RenderTarget3D targetLeft { lTarget, mLightEnv };
 
             targetLeft.prepare(-iod);
             if (mCamera3D)
@@ -140,6 +131,7 @@ namespace M3DS {
         }
 
         if (C3D_RenderTarget* rTarget = mTarget.getRight(); rTarget && iod > 0) {
+            C3D_FrameDrawOn(rTarget);
             RenderTarget3D targetRight { rTarget, mLightEnv };
             targetRight.prepare(iod);
             if (mCamera3D)
@@ -147,19 +139,6 @@ namespace M3DS {
 
             draw(targetRight);
         }
-#elifdef M3DS_SFML
-        sf::Window* window = mTarget.get();
-        RenderTarget3D target3d { window };
-
-        while (const auto event = window->pollEvent()) {
-            if (event->is<sf::Event::Closed>())
-                propagateNotification<false>(Notification::exit);
-        }
-        target3d.prepare();
-        if (mCamera3D)
-            target3d.setCameraPos(mCamera3D->getGlobalTransform());
-        draw(target3d);
-#endif
     }
 
     bool Viewport::addLight(const Light3D* light) noexcept {
@@ -189,11 +168,11 @@ namespace M3DS {
         return mTarget.getSize();
     }
 
-    Error Viewport::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure Viewport::serialise(BinaryOutFileAccessor file) const noexcept {
         return SuperType::serialise(file);
     }
 
-    Error Viewport::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure Viewport::deserialise(BinaryInFileAccessor file) noexcept {
         return SuperType::deserialise(file);
     }
 

@@ -27,32 +27,32 @@ namespace M3DS {
         return mSeparation;
     }
 
-    Error BoxContainer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Error error = Container::serialise(file); error != Error::none)
-            return error;
+    Failure BoxContainer::serialise(BinaryOutFileAccessor file) const noexcept {
+        if (const Failure failure = SuperType::serialise(file))
+            return failure;
 
         if (
             !file.write(mAlign) ||
             !file.write(mSeparation) ||
             !file.write(mVertical)
         )
-            return Error::file_write_fail;
+            return Failure{ ErrorCode::file_write_fail };
 
-        return Error::none;
+        return Success;
     }
 
-    Error BoxContainer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Error error = Container::deserialise(file); error != Error::none)
-            return error;
+    Failure BoxContainer::deserialise(BinaryInFileAccessor file) noexcept {
+        if (const Failure failure = SuperType::deserialise(file))
+            return failure;
 
         if (
             !file.read(mAlign) ||
             !file.read(mSeparation) ||
             !file.read(mVertical)
         )
-            return Error::file_read_fail;
+            return Failure{ ErrorCode::file_read_fail };
 
-        return Error::none;
+        return Success;
 
     }
 

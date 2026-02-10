@@ -1,5 +1,7 @@
 .SUFFIXES:
 
+LIB_NAME	:= m3ds
+
 C_VERSION 	:= 23
 CXX_VERSION := 26
 
@@ -7,18 +9,18 @@ CXX_VERSION := 26
 # Environment Setup
 #---------------------------------------------------------------------------------
 ifeq ($(strip $(DEVKITPRO)),)
-$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPro")
+	$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPro")
 endif
 
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+	$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
 endif
 
-TARGET			:= $(shell basename $(CURDIR))
 BUILD_DIR 		:= build
 SOURCES_DIR		:= source
 INCLUDE_DIR 	:= include
 EMBED_DIR		:= $(BUILD_DIR)
+GFX_DIR			:= gfx
 ifndef (OUTPUT_DIR)
 	OUTPUT_DIR 	:= lib
 endif
@@ -49,7 +51,6 @@ endif
 PORTLIBS		:= $(DEVKITPRO)/portlibs/3ds
 LIBCTRU			:= $(DEVKITPRO)/libctru
 
-LIBS			:= -lcitro2d -lcitro3d -lctru -lm
 LIB_DIRS		:= $(PORTLIBS) $(LIBCTRU)
 
 #---------------------------------------------------------------------------------
@@ -59,8 +60,12 @@ recurse = $(shell find $2 -type $1 -name '$3' 2> /dev/null)
 
 C_FILES			:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.c))
 CXX_FILES		:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.cpp))
-S_FILES			:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.s))
 PICA_FILES		:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.pica))
+
+GFX_FILES		:= $(foreach dir,$(GFX_DIR),$(call recurse,f,$(dir),*.*))
+
+GFX_EXTENSIONS	:= $(addprefix %.,PNG png JPG jpg JPEG jpeg BMP bmp)
+T3X_FILES 		:= $(addsuffix .t3x, $(addprefix $(BUILD_DIR)/, $(filter $(GFX_EXTENSIONS),$(GFX_FILES))))
 
 O_FILES 		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .o, $(basename $(C_FILES) $(CXX_FILES))))
 OD_FILES 		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix _DEBUG.o, $(basename $(C_FILES) $(CXX_FILES))))
@@ -82,6 +87,7 @@ PATH := $(subst C:/,/c/,$(DEVKITPRO)/tools/bin/:$(DEVKITARM)/bin/):$(PATH)
 
 all: debug release
 
+# Shaders
 $(BUILD_DIR)/%.bin: $(SOURCES_DIR)/%.v.pica
 	$(info Compiling $^)
 	@mkdir -p $(dir $@)
@@ -92,6 +98,12 @@ $(BUILD_DIR)/%.bin: $(SOURCES_DIR)/%.v.pica $(SOURCES_DIR)/%.g.pica
 	@mkdir -p $(dir $@)
 	@picasso -o $@ $^
 
+# Textures
+$(BUILD_DIR)/%.t3x: %
+	$(info Processing texture $<)
+	@mkdir -p $(dir $@)
+	@tex3ds --atlas -f rgba8888 -z -i $< -o $@ > /dev/null 2>&1
+
 
 
 # Release
@@ -99,14 +111,14 @@ $(OUTPUT_DIR)/%.a: $(O_FILES)
 	$(info Archiving $(notdir $@))
 	@mkdir -p $(dir $@)
 	@$(AR) rcs $@ $(O_FILES)
-	$(info Compiled $(TARGET) in release mode!)
+	$(info Compiled $(LIB_NAME) in release mode!)
 
-$(BUILD_DIR)/%.o: $(SOURCES_DIR)/%.c $(BIN_FILES)
+$(BUILD_DIR)/%.o: $(SOURCES_DIR)/%.c $(BIN_FILES) $(T3X_FILES)
 	$(info Compiling $< for release)
 	@mkdir -p $(dir $@)
 	@$(CC) -MMD -MP -MF $(BUILD_DIR)/$*.d $(C_FLAGS) $(RELEASE_FLAGS) $(INCLUDE) $(EMBED) -c $< -o $@
 
-$(BUILD_DIR)/%.o: $(SOURCES_DIR)/%.cpp $(BIN_FILES)
+$(BUILD_DIR)/%.o: $(SOURCES_DIR)/%.cpp $(BIN_FILES) $(T3X_FILES)
 	$(info Compiling $< for release)
 	@mkdir -p $(dir $@)
 	@$(CXX) -MMD -MP -MF $(BUILD_DIR)/$*.d $(CXX_FLAGS) $(RELEASE_FLAGS) $(INCLUDE) $(EMBED) -c $< -o $@
@@ -118,33 +130,33 @@ $(OUTPUT_DIR)/%d.a: $(OD_FILES)
 	$(info Archiving $(notdir $@))
 	@mkdir -p $(dir $@)
 	@$(AR) rcs $@ $(OD_FILES)
-	$(info Compiled $(TARGET) in debug mode!)
+	$(info Compiled $(LIB_NAME) in debug mode!)
 
-$(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.c $(BIN_FILES)
+$(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.c $(BIN_FILES) $(T3X_FILES)
 	$(info Compiling $< for debug)
 	@mkdir -p $(dir $@)
 	@$(CC) -MMD -MP -MF $(BUILD_DIR)/$*_DEBUG.d $(C_FLAGS) $(DEBUG_FLAGS) $(INCLUDE) $(EMBED) -c $< -o $@
 
-$(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.cpp $(BIN_FILES)
+$(BUILD_DIR)/%_DEBUG.o: $(SOURCES_DIR)/%.cpp $(BIN_FILES) $(T3X_FILES)
 	$(info Compiling $< for debug)
 	@mkdir -p $(dir $@)
 	@$(CXX) -MMD -MP -MF $(BUILD_DIR)/$*_DEBUG.d $(CXX_FLAGS) $(DEBUG_FLAGS) $(INCLUDE) $(EMBED) -c $< -o $@
 
 
 
-debug: $(OUTPUT_DIR)/lib$(TARGET)d.a
+debug: $(OUTPUT_DIR)/lib$(LIB_NAME)d.a
 
-release: $(OUTPUT_DIR)/lib$(TARGET).a
+release: $(OUTPUT_DIR)/lib$(LIB_NAME).a
 
 lib: release
 
 install: debug release
-	$(info Installing $(TARGET) to $(DEVKITPRO)/portlibs/3ds...)
+	$(info Installing $(LIB_NAME) to $(DEVKITPRO)/portlibs/3ds...)
 	@cp -rv include lib $(DEVKITPRO)/portlibs/3ds > /dev/null
-	$(info Installed $(TARGET)!)
+	$(info Installed $(LIB_NAME)!)
 
 clean:
-	@echo Cleaning $(TARGET)...
+	@echo Cleaning $(LIB_NAME)...
 	@rm -rf $(BUILD_DIR) $(OUTPUT_DIR)
 
 -include $(O_FILES:.o=.d) $(OD_FILES:.o=.d)

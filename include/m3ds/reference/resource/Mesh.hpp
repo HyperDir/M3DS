@@ -43,7 +43,7 @@ namespace M3DS {
 
     	struct Surface {
     		Material material {};
-    		SharedRawImage* texture {};
+    		Texture* texture {};
     		std::span<const Triangle> triangles {};
     		std::array<std::uint16_t, maxBonesPerSurface> boneMappings {};
     	};
@@ -99,8 +99,8 @@ namespace M3DS {
 
     		~SkeletalAnimation() noexcept;
 
-    		[[nodiscard]] static std::expected<std::shared_ptr<SkeletalAnimation>, Error> load(const std::filesystem::path& path);
-    		[[nodiscard]] static std::expected<std::unique_ptr<SkeletalAnimation>, Error> load(BinaryInFileAccessor file);
+    		[[nodiscard]] static std::expected<std::shared_ptr<SkeletalAnimation>, Failure> load(const std::filesystem::path& path);
+    		[[nodiscard]] static std::expected<std::unique_ptr<SkeletalAnimation>, Failure> load(BinaryInFileAccessor file);
     	};
 
     	struct Bone {
@@ -114,7 +114,7 @@ namespace M3DS {
     private:
     	std::filesystem::path mPath {};
     public:
-    	HeapArray<SharedRawImage> textures {};
+    	HeapArray<Texture> textures {};
     	HeapArray<Surface> surfaces {};
     private:
     	LinearHeapArray<std::byte> mSurfaceData {};
@@ -127,8 +127,8 @@ namespace M3DS {
     	Mesh() = default;
     	~Mesh() noexcept;
     public:
-    	[[nodiscard]] static std::expected<std::shared_ptr<Mesh>, Error> load(std::filesystem::path path) noexcept;
-    	[[nodiscard]] static std::expected<std::shared_ptr<Mesh>, Error> load(BinaryInFileAccessor file) noexcept;
+    	[[nodiscard]] static std::expected<std::shared_ptr<Mesh>, Failure> load(std::filesystem::path path) noexcept;
+    	[[nodiscard]] static std::expected<std::shared_ptr<Mesh>, Failure> load(BinaryInFileAccessor file) noexcept;
 
         [[nodiscard]] SkeletalAnimation* getAnimation(std::string_view anim) noexcept;
         [[nodiscard]] const SkeletalAnimation* getAnimation(std::string_view anim) const noexcept;
@@ -137,7 +137,7 @@ namespace M3DS {
         [[nodiscard]] const SkeletalAnimation* getAnimation(std::size_t idx) const noexcept;
 
         [[nodiscard]] std::span<const Surface> getSurfaces() const noexcept;
-        [[nodiscard]] std::span<const SharedRawImage> getTextures() const noexcept;
+        [[nodiscard]] std::span<const Texture> getTextures() const noexcept;
         [[nodiscard]] std::span<const Bone> getBones() const noexcept;
         [[nodiscard]] std::span<const std::uint16_t> getBoneUpdateOrder() const noexcept;
 
