@@ -148,7 +148,7 @@ debug: $(OUTPUT_DIR)/lib$(LIB_NAME)d.a
 
 release: $(OUTPUT_DIR)/lib$(LIB_NAME).a
 
-lib: release
+lib: debug release
 
 install: debug release
 	$(info Installing $(LIB_NAME) to $(DEVKITPRO)/portlibs/3ds...)
