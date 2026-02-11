@@ -1,9 +1,9 @@
 .SUFFIXES:
 
-LIB_NAME	:= m3ds
+LIB_NAME        := m3ds
 
-C_VERSION 	:= 23
-CXX_VERSION := 26
+C_VERSION       := 23
+CXX_VERSION     := 26
 
 #---------------------------------------------------------------------------------
 # Environment Setup
@@ -16,72 +16,72 @@ ifeq ($(strip $(DEVKITARM)),)
 	$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
 endif
 
-BUILD_DIR 		:= build
-SOURCES_DIR		:= source
-INCLUDE_DIR 	:= include
-EMBED_DIR		:= $(BUILD_DIR)
-GFX_DIR			:= gfx
+BUILD_DIR       := build
+SOURCES_DIR     := source
+INCLUDE_DIR     := include
+EMBED_DIR       := $(BUILD_DIR)
+GFX_DIR         := gfx
 ifndef (OUTPUT_DIR)
-	OUTPUT_DIR 	:= lib
+    OUTPUT_DIR  := lib
 endif
 
 #---------------------------------------------------------------------------------
 # Flags
 #---------------------------------------------------------------------------------
-ARCH_FLAGS 		:= -march=armv6k -mtune=mpcore -mfloat-abi=hard -mword-relocations
+ARCH_FLAGS      := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mword-relocations
 
-WARNINGS		:= -Wall -Werror -Wextra -Wconversion -Wpedantic -Wno-psabi
+WARNINGS        := -Wall -Werror -Wextra -Wconversion -Wpedantic -Wno-psabi
 
-MAKEFLAGS 		:= -j14 --silent
-COMMON_FLAGS 	:= $(WARNINGS) -ffast-math $(ARCH_FLAGS) -D__3DS__
-C_FLAGS			:= $(COMMON_FLAGS) -std=c$(C_VERSION)
-CXX_FLAGS		:= $(COMMON_FLAGS) -std=c++$(CXX_VERSION) -fno-rtti -fno-exceptions
+MAKEFLAGS       := -j14 --silent
+COMMON_FLAGS    := $(WARNINGS) -ffast-math $(ARCH_FLAGS) -D__3DS__
+C_FLAGS         := $(COMMON_FLAGS) -std=c$(C_VERSION)
+CXX_FLAGS       := $(COMMON_FLAGS) -std=c++$(CXX_VERSION) -fno-rtti -fno-exceptions
 
-DEBUG_FLAGS		:= -O0 -g -DDEBUG
-RELEASE_FLAGS	:= -O2 -DNDEBUG -s -fomit-frame-pointer
+DEBUG_FLAGS     := -O0 -g -DDEBUG
+RELEASE_FLAGS   := -O2 -DNDEBUG -s -fomit-frame-pointer
 
-ASM_FLAGS 		:= $(ARCH_FLAGS)
-LD_FLAGS		:= -specs=3dsx.specs $(ARCH_FLAGS) -z noexecstack
+ASM_FLAGS       := $(ARCH_FLAGS)
+LD_FLAGS        := -specs=3dsx.specs $(ARCH_FLAGS) -z noexecstack
 
 ifeq ($(OS),Windows_NT)
-	DEVKITPRO := $(shell echo "$(DEVKITPRO)" | sed -e 's|^/opt|C:|')
-	DEVKITARM := $(shell echo "$(DEVKITARM)" | sed -e 's|^/opt|C:|')
+    DEVKITPRO   := $(shell echo "$(DEVKITPRO)" | sed -e 's|^/opt|C:|')
+    DEVKITARM   := $(shell echo "$(DEVKITARM)" | sed -e 's|^/opt|C:|')
 endif
 
-PORTLIBS		:= $(DEVKITPRO)/portlibs/3ds
-LIBCTRU			:= $(DEVKITPRO)/libctru
+PORTLIBS        := $(DEVKITPRO)/portlibs/3ds
+LIBCTRU         := $(DEVKITPRO)/libctru
 
-LIB_DIRS		:= $(PORTLIBS) $(LIBCTRU)
+LIB_DIRS        := $(PORTLIBS) $(LIBCTRU)
 
 #---------------------------------------------------------------------------------
 # Build Variable Setup
 #---------------------------------------------------------------------------------
 recurse = $(shell find $2 -type $1 -name '$3' 2> /dev/null)
 
-C_FILES			:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.c))
-CXX_FILES		:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.cpp))
-PICA_FILES		:= $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.pica))
+C_FILES         := $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.c))
+CXX_FILES       := $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.cpp))
+PICA_FILES      := $(foreach dir,$(SOURCES_DIR),$(call recurse,f,$(dir),*.pica))
 
-GFX_FILES		:= $(foreach dir,$(GFX_DIR),$(call recurse,f,$(dir),*.*))
+GFX_FILES       := $(foreach dir,$(GFX_DIR),$(call recurse,f,$(dir),*.*))
 
-GFX_EXTENSIONS	:= $(addprefix %.,PNG png JPG jpg JPEG jpeg BMP bmp)
-T3X_FILES 		:= $(addsuffix .t3x, $(addprefix $(BUILD_DIR)/, $(filter $(GFX_EXTENSIONS),$(GFX_FILES))))
+GFX_EXTENSIONS  := $(addprefix %.,PNG png JPG jpg JPEG jpeg BMP bmp)
+T3X_FILES       := $(addsuffix .t3x, $(addprefix $(BUILD_DIR)/, $(filter $(GFX_EXTENSIONS),$(GFX_FILES))))
 
-O_FILES 		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .o, $(basename $(C_FILES) $(CXX_FILES))))
-OD_FILES 		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix _DEBUG.o, $(basename $(C_FILES) $(CXX_FILES))))
-BIN_FILES		:= $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .bin, $(basename $(basename $(PICA_FILES)))))
+O_FILES         := $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .o, $(basename $(C_FILES) $(CXX_FILES))))
+OD_FILES        := $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix _DEBUG.o, $(basename $(C_FILES) $(CXX_FILES))))
+BIN_FILES       := $(patsubst $(SOURCES_DIR)/%,$(BUILD_DIR)/%,$(addsuffix .bin, $(basename $(basename $(PICA_FILES)))))
 
-INCLUDE			:= $(foreach dir,$(INCLUDE_DIR),-I./$(dir)) $(foreach dir,$(LIB_DIRS),-isystem $(dir)/include)
-EMBED			:= $(foreach dir,$(EMBED_DIR),--embed-dir=./$(dir))
+INCLUDE         := $(foreach dir,$(INCLUDE_DIR),-I./$(dir)) $(foreach dir,$(LIB_DIRS),-isystem $(dir)/include)
+EMBED           := $(foreach dir,$(EMBED_DIR),--embed-dir=./$(dir))
 
-CC		:= $(DEVKITARM)/bin/arm-none-eabi-gcc
-CXX		:= $(DEVKITARM)/bin/arm-none-eabi-g++
-AR		:= $(DEVKITARM)/bin/arm-none-eabi-gcc-ar
-LD		:= $(CXX)
+CC              := $(DEVKITARM)/bin/arm-none-eabi-gcc
+CXX             := $(DEVKITARM)/bin/arm-none-eabi-g++
+AR              := $(DEVKITARM)/bin/arm-none-eabi-gcc-ar
+LD              := $(CXX)
 
 # msys2 make and mingw32-make don't agree on PATH format on Windows
-PATH := $(DEVKITPRO)/tools/bin/:$(DEVKITARM)/bin/:$(PATH)
-PATH := $(subst C:/,/c/,$(DEVKITPRO)/tools/bin/:$(DEVKITARM)/bin/):$(PATH)
+PATH            := $(DEVKITPRO)/tools/bin/:$(DEVKITARM)/bin/:$(PATH)
+PATH            := $(subst C:/,/c/,$(DEVKITPRO)/tools/bin/:$(DEVKITARM)/bin/):$(PATH)
 
 .PHONY: lib clean all debug release
 
