@@ -6,7 +6,7 @@
 
 #include <citro3d.h>
 
-#include <m3ds/types/Error.hpp>
+#include <m3ds/types/Failure.hpp>
 #include <m3ds/spatial/Vector2.hpp>
 #include <m3ds/utils/Units.hpp>
 

@@ -1,7 +1,10 @@
 #include <m3ds/utils/Input.hpp>
 
 #ifdef __3DS__
-#include <3ds.h>
+extern "C" {
+    #include <3ds/services/hid.h>
+    #include <3ds/services/irrst.h>
+}
 #endif
 
 #include <m3ds/utils/Debug.hpp>

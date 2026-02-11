@@ -351,7 +351,7 @@ namespace M3DS {
         const std::string_view name = mName == getClass() ? std::string_view{} : mName;
 
         if (name.size() > 1024)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         if (
             !file.write(visible) ||
@@ -376,7 +376,7 @@ namespace M3DS {
         }
 
         if (childCount > 1024)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         if (
             !file.seek(childCountPos) ||
@@ -400,7 +400,7 @@ namespace M3DS {
             return Failure{ ErrorCode::file_read_fail };
 
         if (nameLength > 1024)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         mName.resize(nameLength);
         if (!file.read(std::span{mName}))

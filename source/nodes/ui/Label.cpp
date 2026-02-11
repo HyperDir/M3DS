@@ -42,7 +42,7 @@ namespace M3DS {
             return failure;
 
         if (mText.size() > std::numeric_limits<std::uint16_t>::max())
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         const bool defaultFont = (mFont == Font::getDefaultFont());
 

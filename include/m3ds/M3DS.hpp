@@ -2,7 +2,6 @@
 
 #ifdef __3DS__
 #include <3ds.h>
-#include <citro2d.h>
 
 #elifdef M3DS_SFML
 #include <SFML/Graphics/Shader.hpp>
@@ -196,7 +195,6 @@ namespace M3DS {
 
             ResourceRegistry::registerResources<
                 Font,
-                // Mesh,
                 ParticleMaterial2D,
                 TileSet,
                 Resource

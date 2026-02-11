@@ -3,7 +3,10 @@
 #ifdef __3DS__
 #include <concepts>
 
-#include <3ds/allocator/linear.h>
+extern "C" {
+	#include <3ds/allocator/linear.h>
+}
+
 #include <m3ds/utils/Debug.hpp>
 #include <m3ds/containers/HeapArray.hpp>
 

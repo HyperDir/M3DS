@@ -8,7 +8,7 @@
 
 #include <tex3ds.h>
 
-#include "../../include/m3ds/types/Error.hpp"
+#include "../../include/m3ds/types/Failure.hpp"
 
 namespace M3DS {
     struct TextureData {
@@ -66,7 +66,7 @@ namespace M3DS {
         Tex3DS_Texture_s* texture = Tex3DS_TextureImportStdio(file.getNativeHandle(), &textureData->native, nullptr, vram);
         file.close();
         if (!texture)
-            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 
         updateData(*textureData, texture);
         Tex3DS_TextureFree(texture);
@@ -84,7 +84,7 @@ namespace M3DS {
 
         Tex3DS_Texture_s* texture = Tex3DS_TextureImport(data.data(), data.size(), &textureData->native, nullptr, vram);
         if (!texture)
-            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 
         updateData(*textureData, texture);
         Tex3DS_TextureFree(texture);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <m3ds/nodes/3d/Node3D.hpp>
-#include <m3ds/reference/resource/Mesh.hpp>
+#include <m3ds/render/Mesh.hpp>
 
 namespace M3DS {
     class MeshInstance : public Node3D {

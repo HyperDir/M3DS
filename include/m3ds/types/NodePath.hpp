@@ -2,8 +2,8 @@
 
 #include <string_view>
 
-#include "Error.hpp"
-#include "m3ds/utils/BinaryFile.hpp"
+#include <m3ds/types/Failure.hpp>
+#include <m3ds/utils/BinaryFile.hpp>
 
 namespace M3DS {
     class NodePath {
@@ -57,7 +57,7 @@ namespace M3DS {
 
         [[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept {
             if (mPath.size() > std::numeric_limits<size_t>::max())
-                return Failure{ ErrorCode::file_invalid_data };
+                return Failure{ ErrorCode::invalid_data };
 
             if (
                 !file.write(static_cast<std::uint16_t>(mPath.size())) ||

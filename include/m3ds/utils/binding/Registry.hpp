@@ -5,7 +5,7 @@
 #include <m3ds/utils/binding/BoundMember.hpp>
 #include <m3ds/utils/binding/BoundMethod.hpp>
 
-#include <m3ds/types/Error.hpp>
+#include <m3ds/types/Failure.hpp>
 
 #include <m3ds/reference/Resource.hpp>
 #include <m3ds/utils/BinaryFile.hpp>

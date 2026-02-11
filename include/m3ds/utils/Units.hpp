@@ -1,5 +1,7 @@
 #pragma once
 
+#include <numbers>
+
 namespace M3DS {
     template <typename T> using Radians = T;
     template <typename T> using RadiansPerSecond = T;

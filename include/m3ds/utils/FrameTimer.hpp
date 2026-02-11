@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+
 #ifdef __3DS__
-#include <3ds/os.h>
-#include <3ds/svc.h>
+extern "C" {
+    #include <3ds/os.h>
+    #include <3ds/svc.h>
+}
 #endif
 
 #include <chrono>

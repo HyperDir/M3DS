@@ -1,7 +1,10 @@
 #include <m3ds/utils/Pedometer.hpp>
 
 #ifdef __3DS__
-#include <3ds.h> // Including just types.h and ptm.h doesn't seem to compile
+extern "C" {
+    #include <3ds/types.h>
+    #include <3ds/services/ptmu.h>
+}
 
 namespace M3DS {
     Pedometer::Pedometer() {

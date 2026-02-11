@@ -1,7 +1,7 @@
 #pragma once
 
 #include <m3ds/utils/BinaryFile.hpp>
-#include <m3ds/types/Error.hpp>
+#include <m3ds/types/Failure.hpp>
 
 namespace M3DS {
     [[nodiscard]] inline Failure serialise(const std::filesystem::path& path, BinaryOutFileAccessor file) noexcept {
@@ -24,7 +24,7 @@ namespace M3DS {
             return Failure{ ErrorCode::file_read_fail };
 
         if (length > 1024)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         std::string str {};
         str.resize(length);

@@ -1,4 +1,4 @@
-#include <m3ds/reference/resource/Mesh.hpp>
+#include <m3ds/render/Mesh.hpp>
 
 namespace M3DS {
 	static std::flat_map<std::filesystem::path, std::weak_ptr<Mesh>> meshes {};
@@ -45,12 +45,12 @@ namespace M3DS {
 
 		if (animationHeader.duration <= 0.0f) {
 		    Debug::err("Invalid animation duration ({})!", animationHeader.duration);
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		if (animationHeader.nameLength > 256) {
 		    Debug::err("Unreasonable animation name length: {}!", animationHeader.nameLength);
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		auto animation = std::make_unique<SkeletalAnimation>();
@@ -67,7 +67,7 @@ namespace M3DS {
 
 		if (animationHeader.boneTrackCount > 1024) {
 		    Debug::err("Unreasonable bone track count: {}!", animationHeader.boneTrackCount);
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		animation->boneTracks.resize(animationHeader.boneTrackCount);
@@ -169,17 +169,17 @@ namespace M3DS {
 
 		if (header.magic != std::array{ 'M', '3', 'D', 'S' }) {
 		    Debug::err("Invalid M3DS magic of {}", std::string_view{header.magic});
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		if (!header.surfaceDataOffset) {
 		    Debug::err("Surface Data Offset must be greater than 0!");
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		if (!header.triangleDataOffset) {
 		    Debug::err("Triangle Data Offset must be greater than 0!");
-		    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 		}
 
 		struct MakeSharedEnabler : Mesh {};
@@ -206,12 +206,12 @@ namespace M3DS {
 
 			if (t3xDataHeader.magic != std::array{ 'T', '3', 'X', 's' }) {
 			    Debug::err("Invalid T3Xs header!");
-			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+			    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 			}
 
 			if (t3xDataHeader.t3xCount > 16) {
 			    Debug::err("Unreasonable texture count: {}!", t3xDataHeader.t3xCount);
-			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+			    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 			}
 
 			mesh->textures.resize(t3xDataHeader.t3xCount);
@@ -272,7 +272,7 @@ namespace M3DS {
 
 			if (triangleDataHeader.triangleCount > 30'000) {
 			    Debug::err("Unreasonable triangle count: {}!", triangleDataHeader.triangleCount);
-			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+			    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 			}
 
 			mesh->mSurfaceData.resize(triangleDataHeader.triangleCount * sizeof(Triangle));
@@ -311,7 +311,7 @@ namespace M3DS {
 
 			if (surfaceDataHeader.surfaceCount > 128) {
 			    Debug::err("Unreasonable surface count: {}!", surfaceDataHeader.surfaceCount);
-			    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+			    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 			}
 
 			mesh->surfaces.resize(surfaceDataHeader.surfaceCount);
@@ -332,7 +332,7 @@ namespace M3DS {
 
 				if (surfaceHeader.hasTexture && surfaceHeader.textureIndex >= static_cast<int32_t>(mesh->textures.size())) {
 				    Debug::err("Invalid texture index! {}/{}", surfaceHeader.textureIndex, mesh->textures.size());
-				    return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+				    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
 				}
 
 				mesh->surfaces[i] = {
@@ -369,17 +369,17 @@ namespace M3DS {
 
 			if (boneDataHeader.magic != std::array{ 'B', 'O', 'N', 'E' }) {
 				Debug::err("Invalid BONE magic!");
-		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		        return std::unexpected{ Failure{ ErrorCode::invalid_data } };
             }
 
 			if (boneDataHeader.boneNameDataLength > 10'000) {
 				Debug::err("Unreasonable bone name data length: {}!", boneDataHeader.boneNameDataLength);
-		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		        return std::unexpected{ Failure{ ErrorCode::invalid_data } };
             }
 
 			if (boneDataHeader.boneCount > 512) {
 				Debug::err("Unreasonable bone count: {}!", boneDataHeader.boneCount);
-		        return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		        return std::unexpected{ Failure{ ErrorCode::invalid_data } };
             }
 
 			mesh->mBoneNameData.resize(boneDataHeader.boneNameDataLength);
@@ -421,12 +421,12 @@ namespace M3DS {
 
 				if (boneName.offset >= mesh->mBoneNameData.size()) {
 					Debug::err("Invalid bone name offset {}!", boneName.offset);
-		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
                 }
 
 				if (boneName.offset + boneName.length > mesh->mBoneNameData.size()) {
 					Debug::err("Invalid bone name length {} at offset {}!", boneName.length, boneName.offset);
-		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
                 }
 
 				bone.name = { mesh->mBoneNameData.data() + boneName.offset, boneName.length };
@@ -465,7 +465,7 @@ namespace M3DS {
 
 			if (animationDataHeader.magic != std::array{ 'A', 'N', 'I', 'M' }) {
 				Debug::err("Invalid ANIM magic!");
-		            return std::unexpected{ Failure{ ErrorCode::file_invalid_data } };
+		            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
             }
 
 			for (std::uint32_t i{}; i < animationDataHeader.animationCount; ++i) {

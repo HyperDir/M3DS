@@ -152,6 +152,7 @@ lib: debug release
 
 install: debug release
 	$(info Installing $(LIB_NAME) to $(DEVKITPRO)/portlibs/3ds...)
+	@rm -rf $(DEVKITPRO)/portlibs/3ds/include/$(LIB_NAME)
 	@cp -rv include lib $(DEVKITPRO)/portlibs/3ds > /dev/null
 	$(info Installed $(LIB_NAME)!)
 

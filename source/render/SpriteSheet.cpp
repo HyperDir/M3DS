@@ -19,7 +19,7 @@ namespace M3DS {
             return failure;
 
         if (mFrames.x > 256 || mFrames.y > 256)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
         if (!file.write(getFrameSize()))
             return Failure{ ErrorCode::file_write_fail };
 
@@ -36,7 +36,7 @@ namespace M3DS {
             return Failure{ ErrorCode::file_read_fail };
 
         if (frameCount.x > 256 || frameCount.y > 256)
-            return Failure{ ErrorCode::file_invalid_data };
+            return Failure{ ErrorCode::invalid_data };
 
         if (std::expected exp = Texture::load(path)) {
             mTexture = std::move(exp.value());

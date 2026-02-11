@@ -38,8 +38,8 @@ namespace M3DS {
 
         [[nodiscard]] const Member<T>* getMember() const noexcept;
 
-        [[nodiscard]] std::expected<void, StringError> serialise(BinaryOutFileAccessor& file) const noexcept;
-        [[nodiscard]] static std::expected<AnimationTrack, StringError> deserialise(BinaryInFileAccessor& file) noexcept;
+        [[nodiscard]] std::expected<void, Failure> serialise(BinaryOutFileAccessor& file) const noexcept;
+        [[nodiscard]] static std::expected<AnimationTrack, Failure> deserialise(BinaryInFileAccessor& file) noexcept;
     private:
         const Member<T>* mMember {};
         std::vector<TrackEntry<T>> mEntries {};
@@ -79,8 +79,8 @@ namespace M3DS {
         [[nodiscard]] constexpr std::span<AnimationEntry> getEntries() noexcept;
         [[nodiscard]] constexpr std::span<const AnimationEntry> getEntries() const noexcept;
 
-        [[nodiscard]] std::expected<void, StringError> serialise(BinaryOutFileAccessor file) const noexcept;
-        [[nodiscard]] static std::expected<Animation, StringError> deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] std::expected<void, Failure> serialise(BinaryOutFileAccessor file) const noexcept;
+        [[nodiscard]] static std::expected<Animation, Failure> deserialise(BinaryInFileAccessor file) noexcept;
     private:
         std::string mName {};
         std::vector<AnimationEntry> mAnimationEntries {};
@@ -221,17 +221,23 @@ namespace M3DS {
     };
 
     template <typename T>
-    std::expected<void, StringError> AnimationTrack<T>::serialise(BinaryOutFileAccessor& file) const noexcept {
+    std::expected<void, Failure> AnimationTrack<T>::serialise(BinaryOutFileAccessor& file) const noexcept {
         std::string_view className = mMember->getClassName();
         std::string_view memberName = mMember->getName();
 
         static constexpr std::size_t u8max = std::numeric_limits<std::uint8_t>::max();
-        if (className.length() > u8max)
-            return std::unexpected{ std::format("AnimationTrack class name too long: {}! Max: {}", className.length(), u8max) };
-        if (memberName.length() > u8max)
-            return std::unexpected{ std::format("AnimationTrack member name too long: {}! Max: {}", memberName.length(), u8max) };
-        if (mEntries.size() > u8max)
-            return std::unexpected{ std::format("AnimationTrack has too many entries: {}! Max: {}", mEntries.size(), u8max) };
+        if (className.length() > u8max) {
+            Debug::err("AnimationTrack class name too long: {}! Max: {}", className.length(), u8max);
+            return std::unexpected{ Failure{ ErrorCode::out_of_bounds } };
+        }
+        if (memberName.length() > u8max) {
+            Debug::err("AnimationTrack member name too long: {}! Max: {}", memberName.length(), u8max);
+            return std::unexpected{ Failure{ ErrorCode::out_of_bounds } };
+        }
+        if (mEntries.size() > u8max) {
+            Debug::err("AnimationTrack has too many entries: {}! Max: {}", mEntries.size(), u8max);
+            return std::unexpected{ Failure{ ErrorCode::out_of_bounds } };
+        }
 
         const TrackHeader header {
             .classNameLength = static_cast<std::uint8_t>(className.length()),
@@ -244,25 +250,30 @@ namespace M3DS {
             !file.write(header) ||
             !file.write(std::span{ className }) ||
             !file.write(std::span{ memberName })
-        ) return std::unexpected{ "Failed to write AnimationTrack header and class/member name data!" };
+        )
+            return std::unexpected{ Failure{ ErrorCode::file_write_fail } };
 
         for (const auto& [time, value, easing] : mEntries) {
             if constexpr (std::same_as<T, std::string>) {
-                if (value.size() > u8max)
-                    return std::unexpected{ std::format("AnimationTrack string entry too long: {}! Max: {}", value.size(), u8max) };
+                if (value.size() > u8max) {
+                    Debug::err("AnimationTrack string entry too long: {}! Max: {}", value.size(), u8max);
+                    return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+                }
                 
                 if (
                     !file.write(time) ||
                     !file.write(value.size()) ||
                     !file.write(std::span{ value }) ||
                     !file.write(easing)
-                ) return std::unexpected{ "Failed to write AnimationTrack entry!" };
+                )
+                    return std::unexpected{ Failure{ ErrorCode::file_write_fail } };
             } else {
                 if (
                     !file.write(time) ||
                     !file.write(value) ||
                     !file.write(easing)
-                ) return std::unexpected{ "Failed to write AnimationTrack entry!" };
+                )
+                    return std::unexpected{ Failure{ ErrorCode::file_write_fail } };
             }
         }
 
@@ -270,27 +281,31 @@ namespace M3DS {
     }
 
     template <typename T>
-    std::expected<AnimationTrack<T>, StringError> AnimationTrack<T>::deserialise(BinaryInFileAccessor& file) noexcept {
+    std::expected<AnimationTrack<T>, Failure> AnimationTrack<T>::deserialise(BinaryInFileAccessor& file) noexcept {
         TrackHeader header {};
         if (!file.read(header))
-            return std::unexpected{ "Failed to read AnimationTrack header!" };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         HeapArray<char> nameData {};
         // Cannot be greater than 2x uint8_t max
         nameData.resize(header.classNameLength + header.memberNameLength);
         if (!file.read(std::span{ nameData }))
-            return std::unexpected{ "Failed to read AnimationTrack class/member name data!" };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         const std::string_view className { nameData.data(), header.classNameLength };
         const std::string_view memberName { nameData.data() + header.classNameLength, header.memberNameLength };
 
         const GenericMember* member = Registry::getMember(className, memberName);
-        if (!member)
-            return std::unexpected{ std::format("Failed to get member {}::{} when loading AnimationTrack!", className, memberName) };
+        if (!member) {
+            Debug::err("Failed to get member {}::{} when loading AnimationTrack!", className, memberName);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
         const Member<T>* specialisation = member->specialise<T>();
-        if (!specialisation)
-            return std::unexpected{ std::format("Failed to specialise member {}::{} when loading AnimationTrack!", className, memberName) };
+        if (!specialisation) {
+            Debug::err("Failed to specialise member {}::{} when loading AnimationTrack!", className, memberName);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
         AnimationTrack track { specialisation };
         track.interpolationMethod = header.interpolationMethod;
@@ -302,19 +317,22 @@ namespace M3DS {
                 if (
                     !file.read(time) ||
                     !file.read(strLength)
-                ) return std::unexpected{ "Failed to read AnimationTrack entry!" };
+                )
+                    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
                 value.resize(strLength);
                 if (
                     !file.read(std::span{ value }) ||
                     !file.read(easing)
-                ) return std::unexpected{ "Failed to read AnimationTrack entry!" };
+                )
+                    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             } else {
                 if (
                     !file.read(time) ||
                     !file.read(value) ||
                     !file.read(easing)
-                ) return std::unexpected{ "Failed to read AnimationTrack entry!" };
+                )
+                    return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             }
         }
 

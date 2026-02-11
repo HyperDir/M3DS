@@ -33,7 +33,7 @@ namespace M3DS {
 
     WAV::WAV(const std::filesystem::path& path) noexcept : mFile(path) {}
 
-    std::expected<std::shared_ptr<WAV>, StringError> WAV::load(const std::filesystem::path &path) noexcept {
+    std::expected<std::shared_ptr<WAV>, Failure> WAV::load(const std::filesystem::path &path) noexcept {
         struct WAVHeader {
             std::array<char, 4> riffTag {};
             std::uint32_t fileSize {}; // Minus 8 bytes
@@ -47,27 +47,39 @@ namespace M3DS {
         BinaryInFile& file = wav.mFile;
 
         if (!file.read(header))
-            return std::unexpected{ "Failed to read WAV header" };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
-        if (file.length() - 8 != static_cast<std::streamsize>(header.fileSize))
-            return std::unexpected{ "File size does not match WAV header" };
+        if (file.length() - 8 != static_cast<std::streamsize>(header.fileSize)) {
+            Debug::err("File size does not match WAV header");
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
-        if (header.riffTag != std::array{'R', 'I', 'F', 'F'})
-            return std::unexpected{ std::format("Invalid 'RIFF' tag (Got {})", header.riffTag) };
+        if (header.riffTag != std::array{'R', 'I', 'F', 'F'}) {
+            Debug::err("Invalid 'RIFF' tag (Got {})", header.riffTag);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
-        if (header.waveTag != std::array{'W', 'A', 'V', 'E'})
-            return std::unexpected{ std::format("Invalid 'WAVE' tag (Got {})", header.waveTag) };
+        if (header.waveTag != std::array{'W', 'A', 'V', 'E'}) {
+            Debug::err("Invalid 'WAVE' tag (Got {})", header.waveTag);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
-        if (header.fmtTag != std::array{'f', 'm', 't', ' '})
-            return std::unexpected{ std::format("Invalid 'fmt ' tag (Got {})", header.fmtTag) };
+        if (header.fmtTag != std::array{'f', 'm', 't', ' '}) {
+            Debug::err("Invalid 'fmt ' tag (Got {})", header.fmtTag);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
         if (!file.read(wav.mFmt))
-            return std::unexpected{ "Failed to read WAV fmt!" };
+            return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
-        if (wav.mFmt.sampleRate != sampleRate)
-            return std::unexpected{ std::format("Invalid WAV Sample Rate! (Got {}, Expected {})", wav.mFmt.sampleRate, sampleRate) };
-        if (wav.mFmt.channels != 2)
-            return std::unexpected{ std::format("Expected 2 WAV channels, not {}!", wav.mFmt.channels) };
+        if (wav.mFmt.sampleRate != sampleRate) {
+            Debug::err("Invalid WAV Sample Rate! (Got {}, Expected {})", wav.mFmt.sampleRate, sampleRate);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
+        if (wav.mFmt.channels != 2) {
+            Debug::err("Expected 2 WAV channels, not {}!", wav.mFmt.channels);
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
         Debug::log<1>(
             "Loaded WAV File: {}\n"
@@ -98,7 +110,7 @@ namespace M3DS {
 
             ChunkHeader chunkHeader {};
             if (!file.read(chunkHeader))
-                return std::unexpected{ "Failed to read WAV chunk header" };
+                return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
             Debug::log<1>("Chunk size: {}", chunkHeader.size);
 
@@ -108,11 +120,14 @@ namespace M3DS {
             }
 
             // Skip chunk
-            std::ignore = file.seek(static_cast<long>(chunkHeader.size), std::ios::cur);
+            if (!file.seek(static_cast<long>(chunkHeader.size), std::ios::cur))
+                return std::unexpected{ Failure{ ErrorCode::file_seek_fail } };
         }
 
-        if (!wav.mDataOffset)
-            return std::unexpected{ "Failed to find WAV 'data' chunk!" };
+        if (!wav.mDataOffset) {
+            Debug::err("Failed to find WAV 'data' chunk!");
+            return std::unexpected{ Failure{ ErrorCode::invalid_data } };
+        }
 
         return std::make_shared<WAV>(std::move(wav));
     }

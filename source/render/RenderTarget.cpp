@@ -1,11 +1,10 @@
 #include <cassert>
-#include <m3ds/render/RenderTarget.hpp>
-
 #include <cmath>
-
-#include <m3ds/nodes/3d/MeshInstance.hpp>
-
 #include <cstring>
+
+#include <m3ds/render/RenderTarget.hpp>
+#include <m3ds/containers/ScratchBuffer.hpp>
+#include <m3ds/nodes/3d/MeshInstance.hpp>
 
 namespace M3DS {
     constinit std::array shader3d = std::to_array<unsigned char>({
@@ -15,23 +14,36 @@ namespace M3DS {
     constinit std::array shader2d = std::to_array<unsigned char>({
 #embed <2dshader.bin>
     });
-}
-
-namespace M3DS {
+    
     ShaderProgram RenderTarget3D::program { std::span{ shader3d } };
     
-    std::int8_t RenderTarget3D::uLoc_projection = program.getUniformLocation("projection");
-    std::int8_t RenderTarget3D::uLoc_modelView = program.getUniformLocation("modelView");
-    std::int8_t RenderTarget3D::uLoc_bones = program.getUniformLocation("bones");
+    RenderTarget3D::Uniforms const RenderTarget3D::uniforms {
+        .projection = program.getUniformLocation("projection"),
+        .modelView = program.getUniformLocation("modelView"),
+        .bones = program.getUniformLocation("bones")
+    };
 
 
     ShaderProgram RenderTarget2D::program { std::span{ shader2d } };
+    
+    RenderTarget2D::Uniforms const RenderTarget2D::uniforms {
+        .projection = program.getUniformLocation("projection"),
+        .modelView = program.getUniformLocation("modelView")
+    };
 
-    std::int8_t RenderTarget2D::uLoc_projection = program.getUniformLocation("projection");
-    std::int8_t RenderTarget2D::uLoc_modelView = program.getUniformLocation("modelView");
-}
+    ScratchBuffer<Vertex2D, 1024 * 1024 / sizeof(Vertex2D), LinearAllocator<Vertex2D>> scratchBuffer {};
 
-namespace M3DS {
+
+    
+    DrawEnvironment::DrawEnvironment() noexcept {
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+    }
+
+    DrawEnvironment::~DrawEnvironment() noexcept {
+        C3D_FrameEnd(0);
+        scratchBuffer.swap();
+    }
+
     RenderTarget::RenderTarget(const Screen screen, const bool stereoscopic3d) noexcept
         : mScreen(screen)
     {
@@ -100,11 +112,7 @@ namespace M3DS {
     }
 
     void RenderTarget::clear(const Colour colour, const ClearFlags flags) noexcept {
-        const std::uint32_t c =
-            static_cast<std::uint32_t>(colour.r) << 24 |
-            static_cast<std::uint32_t>(colour.g << 16) |
-            static_cast<std::uint32_t>(colour.b << 8) |
-            static_cast<std::uint32_t>(colour.a);
+        const std::uint32_t c = colour.convertForFrameBuf();
 
         if (mTargetLeft)
             C3D_RenderTargetClear(
@@ -126,7 +134,7 @@ namespace M3DS {
 
     RenderTarget2D::~RenderTarget2D() noexcept {
         disablePrimitive();
-        mScratchBuffer.swap();
+        scratchBuffer.swap();
     }
 
     Vector2i RenderTarget2D::getSize() const {
@@ -137,7 +145,7 @@ namespace M3DS {
         if (mPrimitive)
             return;
 
-        program.updateUniform(uLoc_modelView, mCameraInverse);
+        program.updateUniform4x4(uniforms.modelView, mCameraInverse);
         setTint(Colours::white);
         mPrimitive = true;
     }
@@ -153,20 +161,20 @@ namespace M3DS {
     }
 
     void RenderTarget2D::primitiveSendVertex(const Vertex2D& vertex) noexcept {
-        if (Failure failure = mScratchBuffer.emplace(vertex))
+        if (Failure failure = scratchBuffer.emplace(vertex))
             Debug::err(failure);
     }
 
     void RenderTarget2D::primitiveFlush() noexcept {
         assert(mPrimitive && "Must be in primitive mode to flush!");
 
-        if (const std::span buf = mScratchBuffer.getCurrentSpan(); !buf.empty()) {
+        if (const std::span buf = scratchBuffer.getCurrentSpan(); !buf.empty()) {
             C3D_BufInfo* bufInfo = C3D_GetBufInfo();
             BufInfo_Init(bufInfo);
             BufInfo_Add(bufInfo, buf.data(), sizeof(Vertex2D), 3, 0x210);
 
             C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(buf.size()));
-            mScratchBuffer.startNewSpan();
+            scratchBuffer.startNewSpan();
         }
     }
 
@@ -177,18 +185,16 @@ namespace M3DS {
         if (mPrimitive)
             primitiveFlush();
 
-        mBoundTexture = texture;
-
         if (texture) {
- 		    C3D_TexEnv* env = C3D_GetTexEnv(0);
-		    C3D_TexEnvInit(env);
-            C3D_TexEnvSrc(env, C3D_RGB, GPU_TEXTURE0, GPU_PRIMARY_COLOR);
-            C3D_TexEnvSrc(env, C3D_Alpha, GPU_TEXTURE0);
+            if (!mBoundTexture)
+                C3D_TexEnvSrc(C3D_GetTexEnv(0), C3D_Both, GPU_TEXTURE0, GPU_CONSTANT);
 
             C3D_TexBind(0, texture);
         } else {
-            C3D_TexEnvSrc(C3D_GetTexEnv(0), C3D_Both, GPU_PRIMARY_COLOR);
+            C3D_TexEnvSrc(C3D_GetTexEnv(0), C3D_Both, GPU_CONSTANT);
         }
+
+        mBoundTexture = texture;
     }
 
     void RenderTarget2D::setTint(const Colour colour) noexcept {
@@ -199,7 +205,7 @@ namespace M3DS {
             primitiveFlush();
 
         mTintColour = colour;
-        C3D_TexEnvColor(C3D_GetTexEnv(1), mTintColour.convertForGPU());
+        C3D_TexEnvColor(C3D_GetTexEnv(0), mTintColour.convertForGPU());
     }
 
     void RenderTarget2D::draw(const Triangle2D& triangle, C3D_Tex* texture) noexcept {
@@ -227,7 +233,7 @@ namespace M3DS {
 
         const Matrix4x4 modelView = mCameraInverse * mesh.transform;
 
-        program.updateUniform(uLoc_modelView, modelView);
+        program.updateUniform4x4(uniforms.modelView, modelView);
 
         C3D_BufInfo* bufInfo = C3D_GetBufInfo();
         BufInfo_Init(bufInfo);
@@ -511,33 +517,22 @@ namespace M3DS {
 
         C3D_TexEnv* env0 = C3D_GetTexEnv(0);
         C3D_TexEnvInit(env0);
-        C3D_TexEnvSrc(env0, C3D_Both, GPU_TEXTURE0);
+        C3D_TexEnvSrc(env0, C3D_Both, GPU_CONSTANT);
         C3D_TexEnvFunc(env0, C3D_Both, GPU_MODULATE);
+        C3D_TexEnvColor(env0, mTintColour.convertForGPU());
 
         C3D_TexEnv* env1 = C3D_GetTexEnv(1);
         C3D_TexEnvInit(env1);
-        C3D_TexEnvSrc(env1, C3D_Both, GPU_PREVIOUS, GPU_CONSTANT);
+        C3D_TexEnvSrc(env1, C3D_Both, GPU_PREVIOUS, GPU_PRIMARY_COLOR);
         C3D_TexEnvFunc(env1, C3D_Both, GPU_MODULATE);
-        C3D_TexEnvColor(env1, mTintColour.convertForGPU());
-
-        C3D_TexEnv* env2 = C3D_GetTexEnv(2);
-        C3D_TexEnvInit(env2);
-        C3D_TexEnvSrc(env2, C3D_Both, GPU_PREVIOUS, GPU_PRIMARY_COLOR);
-        C3D_TexEnvFunc(env2, C3D_Both, GPU_MODULATE);
 
 
         C3D_DepthTest(true, GPU_GEQUAL, GPU_WRITE_ALL);
-
-        C3D_TexBind(0, nullptr);
-        mBoundTexture = nullptr;
-
         C3D_CullFace(GPU_CULL_NONE);
 
-		program.updateUniform(uLoc_projection, mProjection);
-    }
+        mBoundTexture = nullptr;
 
-    void RenderTarget2D::clear() noexcept {
-        C3D_RenderTargetClear(mTarget, C3D_CLEAR_ALL, Colours::black.convertForFrameBuf(), 0);
+		program.updateUniform4x4(uniforms.projection, mProjection);
     }
 
     void RenderTarget2D::clearCamera() noexcept {
@@ -591,10 +586,6 @@ namespace M3DS {
         , mLightEnv(lightEnv)
     {}
 
-    void RenderTarget3D::clear() noexcept {
-        C3D_RenderTargetClear(mTarget, C3D_CLEAR_ALL, 0x6666FFFF, 0);
-    }
-
     void RenderTarget3D::prepare(const float iod) noexcept {
         program.bind();
 
@@ -625,11 +616,13 @@ namespace M3DS {
  		if (!mesh) return;
 
  		// Update the uniforms
-        program.updateUniform(uLoc_projection, mProjection);
-        program.updateUniform(uLoc_modelView, mCameraInverse * meshInstance.getGlobalTransform());
+        program.updateUniform4x4(uniforms.projection, mProjection);
+        program.updateUniform4x4(uniforms.modelView, mCameraInverse * meshInstance.getGlobalTransform());
 
  		C3D_TexEnv* env = C3D_GetTexEnv(0);
  		C3D_TexEnvInit(env);
+
+ 		C3D_TexEnvInit(C3D_GetTexEnv(1));
 
         const std::span<const MeshInstance::BoneInstance> boneInstances = meshInstance.getBones();
         const std::span<const Mesh::Bone> bones = mesh->getBones();
@@ -641,14 +634,13 @@ namespace M3DS {
             BufInfo_Init(bufInfo);
             BufInfo_Add(bufInfo, triangles.data(), sizeof(Mesh::Vertex), 5, 0x43210);
 
- 			static_assert(std::tuple_size_v<decltype(boneMappings)> < 256);
  			if (!boneInstances.empty()) {
- 				for (std::uint8_t i{}; i < static_cast<std::uint8_t>(boneMappings.size()); ++i) {
- 					const Matrix4x4& mtx = boneInstances[boneMappings[i]].transform * bones[boneMappings[i]].inverseBindMatrix;
- 					C3D_FVec* const ptr = C3D_FVUnifWritePtr(GPU_VERTEX_SHADER, uLoc_bones + i * 3, 3);
-
- 					std::memcpy(ptr, &mtx, sizeof(float) * 4 * 3);
- 				}
+ 			    for (std::size_t i{}; i < boneMappings.size(); ++i) {
+ 			        program.updateUniform4x3(
+                         static_cast<std::int8_t>(uniforms.bones + i * 3),
+                         boneInstances[boneMappings[i]].transform * bones[boneMappings[i]].inverseBindMatrix
+                     );
+ 			    }
  			}
 
  			if (texture) {
@@ -672,9 +664,6 @@ namespace M3DS {
  					C3D_TexEnvFunc(env, C3D_Both, GPU_ADD);
  				}
  			}
-
- 		    C3D_TexEnvInit(C3D_GetTexEnv(1));
-            C3D_TexEnvInit(C3D_GetTexEnv(2));
 
  			mLightEnv.material(material);
  			C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(triangles.size() * 3));

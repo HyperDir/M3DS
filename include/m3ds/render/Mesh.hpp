@@ -12,7 +12,7 @@
 #include <m3ds/spatial/Vector3.hpp>
 #include <m3ds/spatial/Vector2.hpp>
 #include <m3ds/spatial/Matrix4x4.hpp>
-#include <m3ds/types/Error.hpp>
+#include <m3ds/types/Failure.hpp>
 #include <m3ds/utils/BinaryFile.hpp>
 
 namespace M3DS {

@@ -4,12 +4,12 @@
 
 #include <m3ds/utils/BinaryFile.hpp>
 #include <m3ds/utils/Units.hpp>
-#include <m3ds/types/Error.hpp>
+#include <m3ds/types/Failure.hpp>
 
 namespace M3DS {
     class WAV {
     public:
-        [[nodiscard]] static std::expected<std::shared_ptr<WAV>, StringError> load(const std::filesystem::path& path) noexcept;
+        [[nodiscard]] static std::expected<std::shared_ptr<WAV>, Failure> load(const std::filesystem::path& path) noexcept;
 
         struct FormatInfo {
             std::uint32_t blockSize {};
