@@ -4,8 +4,6 @@
 
 #include <m3ds/types/TypePack.hpp>
 
-#include "BoundMethod.hpp"
-
 namespace M3DS {
     template <typename MemberType>
     class Member;
@@ -46,7 +44,7 @@ namespace M3DS {
     };
 
     // This could be de-virtualised, but this makes the API very consistent so it's fine for now
-    // Also, de-virtualising this would slightly slow down private members=
+    // Also, de-virtualising this would slightly slow down private members
     template <typename ClassType, typename MemberType>
     class PublicMemberSpecialisation final : public Member<MemberType> {
     public:
