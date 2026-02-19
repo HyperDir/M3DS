@@ -40,7 +40,7 @@ namespace M3DS {
         template <TrivialIOType T> [[nodiscard]] bool read(std::span<T> to) noexcept;
 
         template <TrivialIOType T> [[nodiscard]] bool write(const T& to) noexcept;
-        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) noexcept;
+        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) const noexcept;
         template <TrivialIOType T> [[nodiscard]] bool write(std::span<const T> to) noexcept;
 
         [[nodiscard]] bool seek(long offset, std::ios_base::seekdir dir = std::ios_base::beg) noexcept;
@@ -91,7 +91,7 @@ namespace M3DS {
         [[nodiscard]] constexpr FILE* getNativeHandle() & noexcept;
 
         template <TrivialIOType T> [[nodiscard]] bool write(const T& to) noexcept;
-        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) noexcept;
+        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) const noexcept;
         template <TrivialIOType T> [[nodiscard]] bool write(std::span<const T> to) noexcept;
 
         [[nodiscard]] bool seek(long offset, std::ios_base::seekdir dir = std::ios_base::beg) noexcept;
@@ -111,7 +111,7 @@ namespace M3DS {
         template <TrivialIOType T> [[nodiscard]] bool read(std::span<T> to) const noexcept;
 
         template <TrivialIOType T> [[nodiscard]] bool write(const T& to) const noexcept;
-        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) noexcept;
+        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) const noexcept;
         template <TrivialIOType T> [[nodiscard]] bool write(std::span<const T> to) const noexcept;
 
         [[nodiscard]] bool seek(long offset, std::ios_base::seekdir dir = std::ios_base::beg) const noexcept;
@@ -146,7 +146,7 @@ namespace M3DS {
         [[nodiscard]] constexpr BinaryOutFileAccessor(BinaryFileAccessor ref) noexcept;
 
         template <TrivialIOType T> [[nodiscard]] bool write(const T& to) const noexcept;
-        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) noexcept;
+        template <TrivialIOType T> [[nodiscard]] bool write(std::span<T> to) const noexcept;
         template <TrivialIOType T> [[nodiscard]] bool write(std::span<const T> to) const noexcept;
 
         [[nodiscard]] bool seek(long offset, std::ios_base::seekdir dir = std::ios_base::beg) const noexcept;
@@ -241,7 +241,7 @@ namespace M3DS {
     }
 
     template <TrivialIOType T>
-    bool BinaryFile::write(std::span<T> to) noexcept {
+    bool BinaryFile::write(std::span<T> to) const noexcept {
         return write(std::span<const T>{to});
     }
 
@@ -351,7 +351,7 @@ namespace M3DS {
     }
 
     template <TrivialIOType T>
-    bool BinaryOutFile::write(std::span<T> to) noexcept {
+    bool BinaryOutFile::write(std::span<T> to) const noexcept {
         return write(std::span<const T>{to});
     }
 
@@ -447,7 +447,7 @@ namespace M3DS {
     }
 
     template <TrivialIOType T>
-    bool BinaryFileAccessor::write(std::span<T> to) noexcept {
+    bool BinaryFileAccessor::write(std::span<T> to) const noexcept {
         return write(std::span<const T>{to});
     }
 
@@ -490,7 +490,7 @@ namespace M3DS {
     }
 
     template <TrivialIOType T>
-    bool BinaryOutFileAccessor::write(std::span<T> to) noexcept {
+    bool BinaryOutFileAccessor::write(std::span<T> to) const noexcept {
         return write(std::span<const T>{to});
     }
 
