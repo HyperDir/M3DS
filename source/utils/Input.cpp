@@ -2,6 +2,7 @@
 
 #ifdef __3DS__
 extern "C" {
+    #include <3ds/result.h>
     #include <3ds/services/hid.h>
     #include <3ds/services/irrst.h>
 }
