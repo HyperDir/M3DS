@@ -88,11 +88,11 @@ namespace M3DS {
         mFreeQueue.emplace(node);
     }
 
-    Failure Root::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
+    Failure Root::serialise([[maybe_unused]] Serialiser& serialiser) const noexcept {
         return Failure{ ErrorCode::root_serialisation_disabled };
     }
 
-    Failure Root::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
+    Failure Root::deserialise([[maybe_unused]] Deserialiser& deserialiser) noexcept {
         return Failure{ ErrorCode::root_serialisation_disabled };
     }
 

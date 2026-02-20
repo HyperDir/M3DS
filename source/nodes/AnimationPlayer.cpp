@@ -49,14 +49,14 @@ namespace M3DS {
         return {};
     }
 
-    std::expected<Animation, Failure> Animation::deserialise(BinaryInFileAccessor file) noexcept {
+    std::expected<Animation, Failure> Animation::deserialise(Deserialiser& deserialiser) noexcept {
         AnimationHeader header {};
-        if (!file.read(header))
+        if (!deserialiser.read(header))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Animation animation {};
         animation.mName.resize(header.nameLength);
-        if (!file.read(std::span{animation.mName}))
+        if (!deserialiser.read(std::span{animation.mName}))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
         
         if (header.animationEntryCount == 0) {
@@ -68,21 +68,21 @@ namespace M3DS {
 
         for (auto& animationEntry : animation.mAnimationEntries) {
             AnimationEntryHeader entryHeader {};
-            if (!file.read(entryHeader))
+            if (!deserialiser.read(entryHeader))
                 return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
             animationEntry.tracks.resize(entryHeader.entryCount);
 
             std::string pathData {};
             pathData.resize(entryHeader.pathLength);
-            if (!file.read(std::span{pathData}))
+            if (!deserialiser.read(std::span{pathData}))
                 return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
             animationEntry.path = NodePath{ std::move(pathData) };
 
             for (auto& trackVariant : animationEntry.tracks) {
                 TypeIdentifier identifier {};
-                if (!file.read(identifier))
+                if (!deserialiser.read(identifier))
                     return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
                 if (!isValidIdentifier(identifier)) {
@@ -92,7 +92,7 @@ namespace M3DS {
 
                 auto exp = visit(identifier, [&]<BindableType T>() -> std::expected<AnimationTrackVariant, Failure> {
                     if constexpr (AnimationTypes::contains<T>()) {
-                        return AnimationTrack<T>::deserialise(file);
+                        return AnimationTrack<T>::deserialise(deserialiser);
                     } else {
                         Debug::err("Invalid identifier: {}", identifier);
                         return std::unexpected{ Failure{ ErrorCode::invalid_data } };
@@ -213,18 +213,18 @@ namespace M3DS {
         return mActive;
     }
 
-    Failure AnimationPlayer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure AnimationPlayer::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (mAnimations.size() > 1024)
             return Failure{ ErrorCode::invalid_data };
 
-        if (!file.write(static_cast<std::uint16_t>(mAnimations.size())))
+        if (!serialiser.write(static_cast<std::uint16_t>(mAnimations.size())))
             return Failure{ ErrorCode::file_write_fail };
 
         for (const std::unique_ptr<Animation>& animation : mAnimations) {
-            if (std::expected exp = animation->serialise(file); !exp.has_value()) {
+            if (std::expected exp = animation->serialise(serialiser); !exp.has_value()) {
                 Debug::err(exp.error());
                 return Failure{ ErrorCode::invalid_data };
             }
@@ -235,12 +235,12 @@ namespace M3DS {
         return Success;
     }
 
-    Failure AnimationPlayer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure AnimationPlayer::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         std::uint16_t animationCount;
-        if (!file.read(animationCount))
+        if (!deserialiser.read(animationCount))
             return Failure{ ErrorCode::file_read_fail };
 
         if (animationCount > 1024)
@@ -249,7 +249,7 @@ namespace M3DS {
         mAnimations.resize(animationCount);
 
         for (std::unique_ptr<Animation>& animation : mAnimations) {
-            if (std::expected exp = Animation::deserialise(file)) {
+            if (std::expected exp = Animation::deserialise(deserialiser)) {
                 animation = std::make_unique<Animation>(std::move(exp.value()));
             } else {
                 Debug::err(exp.error());

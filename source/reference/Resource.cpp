@@ -26,7 +26,9 @@ namespace M3DS {
         if (!file)
             return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
 
-        return load(file.getAccessor()).transform(
+        Deserialiser deserialiser { file.getAccessor() };
+
+        return load(deserialiser).transform(
             [&](std::shared_ptr<Resource> ptr) {
                 ptr->setPath(path);
                 mResources.emplace(std::move(path), ptr);
@@ -35,16 +37,16 @@ namespace M3DS {
         );
     }
 
-    std::expected<std::shared_ptr<Resource>, Failure> ResourceRegistry::load(BinaryInFileAccessor file) {
+    std::expected<std::shared_ptr<Resource>, Failure> ResourceRegistry::load(Deserialiser& deserialiser) {
         std::uint8_t classNameLength;
-        if (!file.read(classNameLength))
+        if (!deserialiser.read(classNameLength))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Debug::log("Length: {}", classNameLength);
 
         std::string className {};
         className.resize(classNameLength);
-        if (!file.read(std::span{className}))
+        if (!deserialiser.read(std::span{className}))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Debug::log<1>("Deserialising class: {}...", className);
@@ -59,7 +61,7 @@ namespace M3DS {
             return std::unexpected{ Failure{ ErrorCode::non_default_constructible_class } };
         }
 
-        if (const Failure failure = ptr->deserialise(file))
+        if (const Failure failure = ptr->deserialise(deserialiser))
             return std::unexpected{ failure };
 
         return { std::move(ptr) };
@@ -69,18 +71,20 @@ namespace M3DS {
         if (resource.mPath.empty())
             return Failure{ ErrorCode::no_resource_path };
 
-        if (BinaryOutFile file { resource.mPath })
-            return resource.serialise(file.getAccessor());
+        if (BinaryOutFile file { resource.mPath }) {
+            Serialiser serialiser { file.getAccessor() };
+            return resource.serialise(serialiser);
+        }
 
         return Failure{ ErrorCode::file_open_fail };
     }
 
-    Failure Resource::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure Resource::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure Resource::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure Resource::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
 

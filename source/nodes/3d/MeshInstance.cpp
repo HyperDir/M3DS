@@ -167,15 +167,15 @@ namespace M3DS {
         return mMesh ? mMesh->getAnimationCount() : 0;
     }
 
-    Failure MeshInstance::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure MeshInstance::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         const bool hasMesh = static_cast<bool>(mMesh);
-        if (!file.write(hasMesh))
+        if (!serialiser.write(hasMesh))
             return Failure{ ErrorCode::file_write_fail };
         if (hasMesh) {
-            if (const Failure failure = M3DS::serialise(mMesh->getPath(), file))
+            if (const Failure failure = M3DS::serialise(mMesh->getPath(), serialiser))
                 return failure;
 
             // TODO: Serialise current animation state?
@@ -184,17 +184,17 @@ namespace M3DS {
         return Success;
     }
 
-    Failure MeshInstance::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure MeshInstance::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         bool hasMesh;
-        if (!file.read(hasMesh))
+        if (!deserialiser.read(hasMesh))
             return Failure{ ErrorCode::file_read_fail };
 
         if (hasMesh) {
             std::filesystem::path path;
-            if (const Failure failure = M3DS::deserialise(path, file))
+            if (const Failure failure = M3DS::deserialise(path, deserialiser))
                 return failure;
 
             if (std::expected exp = Mesh::load(path))

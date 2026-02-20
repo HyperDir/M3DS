@@ -11,10 +11,10 @@ namespace M3DS {
     class Resource : public Object, std::enable_shared_from_this<Resource> {
         M_CLASS(Resource, Object)
         friend class ResourceRegistry;
-        friend constexpr Failure serialise(const Resource* resource, BinaryOutFileAccessor file);
+        friend constexpr Failure serialise(const Resource* resource, Serialiser& serialiser);
 
         template <std::derived_from<Resource> T>
-        friend constexpr Failure deserialise(std::shared_ptr<T>& resource, BinaryInFileAccessor file);
+        friend constexpr Failure deserialise(std::shared_ptr<T>& resource, Deserialiser& deserialiser);
 
         std::filesystem::path mPath {};
     public:
@@ -40,7 +40,7 @@ namespace M3DS {
         static constexpr void registerResources();
 
         [[nodiscard]] static std::expected<std::shared_ptr<Resource>, Failure> load(std::filesystem::path path);
-        [[nodiscard]] static std::expected<std::shared_ptr<Resource>, Failure> load(BinaryInFileAccessor file);
+        [[nodiscard]] static std::expected<std::shared_ptr<Resource>, Failure> load(Deserialiser& deserialiser);
 
         [[nodiscard]] static Failure save(const Resource& resource) noexcept;
     };
@@ -63,43 +63,43 @@ namespace M3DS {
 
     // TODO: Can be optimised by removing repeated writes in a single serialisation pass
     // TODO: where the same resource is referenced more than once
-    [[nodiscard]] constexpr Failure serialise(const Resource* resource, BinaryOutFileAccessor file) {
+    [[nodiscard]] constexpr Failure serialise(const Resource* resource, Serialiser& serialiser) {
         const std::filesystem::path& path = resource->getPath();
         const bool local = path.empty();
 
-        if (!file.write(local))
+        if (!serialiser.write(local))
             return Failure{ ErrorCode::file_write_fail };
 
         if (local)
-            return resource->serialise(file);
+            return resource->serialise(serialiser);
 
-        if (const Failure failure = serialise(path, file))
+        if (const Failure failure = serialise(path, serialiser))
             return failure;
 
         if (BinaryOutFile f { path })
-            return resource->serialise(f.getAccessor());
+            return resource->serialise(serialiser);
 
         return Failure{ ErrorCode::file_open_fail };
     }
 
 
     template <std::derived_from<Resource> T>
-    [[nodiscard]] constexpr Failure deserialise(std::shared_ptr<T>& resource, BinaryInFileAccessor file) {
+    [[nodiscard]] constexpr Failure deserialise(std::shared_ptr<T>& resource, Deserialiser& des) {
         bool local;
-        if (!file.read(local))
+        if (!des.read(local))
             return Failure{ ErrorCode::file_read_fail };
 
         Debug::log<1>("Local: {}", local);
 
         if (local) {
-            if (std::expected result = ResourceRegistry::load(file)) {
+            if (std::expected result = ResourceRegistry::load(des)) {
                 resource = object_pointer_cast<T>(std::move(result.value()));
             } else {
                 return result.error();
             }
         } else {
             std::filesystem::path path {};
-            if (const Failure failure = deserialise(path, file))
+            if (const Failure failure = deserialise(path, des))
                 return failure;
 
             if (std::expected result = ResourceRegistry::load(std::move(path))) {

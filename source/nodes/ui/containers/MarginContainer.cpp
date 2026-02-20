@@ -12,21 +12,21 @@ namespace M3DS {
         }
     }
 
-    Failure MarginContainer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure MarginContainer::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(mMargin))
+        if (!serialiser.write(mMargin))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure MarginContainer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure MarginContainer::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(mMargin))
+        if (!deserialiser.read(mMargin))
             return Failure{ ErrorCode::file_read_fail };
 
         return Success;

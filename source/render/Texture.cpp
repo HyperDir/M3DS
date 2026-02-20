@@ -71,6 +71,8 @@ namespace M3DS {
         updateData(*textureData, texture);
         Tex3DS_TextureFree(texture);
 
+
+
         textureRegistry.emplace(
             textureData->path.native(),
             textureData
@@ -115,13 +117,13 @@ namespace M3DS {
         return mSize;
     }
 
-    Failure Texture::serialise(BinaryOutFileAccessor file) const noexcept {
-        return M3DS::serialise(getPath(), file);
+    Failure Texture::serialise(Serialiser& serialiser) const noexcept {
+        return M3DS::serialise(getPath(), serialiser);
     }
 
-    Failure Texture::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure Texture::deserialise(Deserialiser& deserialiser) noexcept {
         std::filesystem::path path {};
-        if (const Failure failure = M3DS::deserialise(path, file))
+        if (const Failure failure = M3DS::deserialise(path, deserialiser))
             return failure;
 
         if (std::expected exp = load(path)) {

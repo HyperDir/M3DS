@@ -70,8 +70,8 @@ namespace M3DS {
         setSlideOnSlope(mSerialisationData.slideOnSlope);
     }
 
-    Failure KinematicBody3D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure KinematicBody3D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         const InternalData data {
@@ -80,18 +80,18 @@ namespace M3DS {
             getSlideOnSlope(),
         };
 
-        if (!file.write(data))
+        if (!serialiser.write(data))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure KinematicBody3D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure KinematicBody3D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         InternalData data;
-        if (!file.read(data))
+        if (!deserialiser.read(data))
             return Failure{ ErrorCode::file_read_fail };
 
         setVelocity(data.velocity);

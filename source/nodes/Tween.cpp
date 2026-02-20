@@ -18,7 +18,7 @@ namespace M3DS {
                     if (mElapsed >= mDuration) {
                         arg.member->set(mTweenObject, arg.to);
                         mActive = false;
-                        tweenComplete.emit(this);
+                        tweenComplete.emit();
                     } else if constexpr (CanInterpolate<T>) {
                         arg.member->set(
                             mTweenObject,
@@ -32,12 +32,12 @@ namespace M3DS {
         Node::update(delta);
     }
 
-    Failure Tween::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
+    Failure Tween::serialise([[maybe_unused]] Serialiser& serialiser) const noexcept {
         Debug::err("Tween serialisation not implemented!");
         return Failure{ ErrorCode::not_implemented };
     }
 
-    Failure Tween::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
+    Failure Tween::deserialise([[maybe_unused]] Deserialiser& deserialiser) noexcept {
         Debug::err("Tween serialisation not implemented!");
         return Failure{ ErrorCode::not_implemented };
     }

@@ -14,11 +14,11 @@ namespace M3DS {
         mAccessor->userData = this;
 
         mAccessor->areaEntered = [this](const SPhys::Area3D* other) {
-            areaEntered.emit(this, static_cast<Area3D*>(other->userData));
+            areaEntered.emit(static_cast<Area3D*>(other->userData));
         };
 
         mAccessor->areaExited = [this](const SPhys::Area3D* other) {
-            areaExited.emit(this, static_cast<Area3D*>(other->userData));
+            areaExited.emit(static_cast<Area3D*>(other->userData));
         };
 
         updateCollisionObject(mAccessor.get());
@@ -35,27 +35,27 @@ namespace M3DS {
         updateCollisionObject(nullptr);
     }
 
-    Failure Area3D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Area3D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (const Failure failure = areaEntered.serialise(file))
+        if (const Failure failure = areaEntered.serialise(this, serialiser))
             return failure;
 
-        if (const Failure failure = areaExited.serialise(file))
+        if (const Failure failure = areaExited.serialise(this, serialiser))
             return failure;
 
         return Success;
     }
 
-    Failure Area3D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Area3D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (const Failure failure = areaEntered.deserialise(file))
+        if (const Failure failure = areaEntered.deserialise(this, deserialiser))
             return failure;
 
-        if (const Failure failure = areaExited.deserialise(file))
+        if (const Failure failure = areaExited.deserialise(this, deserialiser))
             return failure;
 
         return Success;

@@ -31,42 +31,42 @@ namespace M3DS {
         return mLabel;
     }
 
-    Failure Button::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Button::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(action) ||
-            !file.write(mState) ||
-            !file.write(mTouchActivated)
+            !serialiser.write(action) ||
+            !serialiser.write(mState) ||
+            !serialiser.write(mTouchActivated)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         for (const Style& style : mBoxStyles) {
-            if (const Failure failure = M3DS::serialise(style, file))
+            if (const Failure failure = M3DS::serialise(style, serialiser))
                 return failure;
         }
 
-        return buttonPressed.serialise(file);
+        return buttonPressed.serialise(this, serialiser);
     }
 
-    Failure Button::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Button::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(action) ||
-            !file.read(mState) ||
-            !file.read(mTouchActivated)
+            !deserialiser.read(action) ||
+            !deserialiser.read(mState) ||
+            !deserialiser.read(mTouchActivated)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         for (Style& style : mBoxStyles) {
-            if (const Failure failure = M3DS::deserialise(style, file))
+            if (const Failure failure = M3DS::deserialise(style, deserialiser))
                 return failure;
         }
 
-        return buttonPressed.deserialise(file);
+        return buttonPressed.deserialise(this, deserialiser);
     }
 
     void Button::input(Input::InputFrame& inputFrame) {
@@ -91,13 +91,13 @@ namespace M3DS {
             mTouchActivated = true;
             setState(State::pressed);
             if (action == Action::emit_on_press)
-                buttonPressed.emit(this);
+                buttonPressed.emit();
         } else if (inputFrame.isUp(Input::Key::touch) && mState == State::pressed && mTouchActivated) {
             Debug::log<2>("Button Released");
             mTouchActivated = false;
             setState(State::normal);
             if (action == Action::emit_on_release)
-                buttonPressed.emit(this);
+                buttonPressed.emit();
         } else if (!touchInside && (mState == State::pressed) && inputFrame.isHeld(Input::Key::touch)) {
             Debug::log<2>("Unsetting Button");
             mTouchActivated = false;

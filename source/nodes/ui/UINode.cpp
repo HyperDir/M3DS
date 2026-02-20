@@ -172,40 +172,40 @@ namespace M3DS {
         return mClipContent;
     }
 
-    Failure UINode::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure UINode::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(mSize) ||
-            !file.write(mUserMinSize) ||
-            !file.write(mFillSpace) ||
-            !file.write(mClipContent)
+            !serialiser.write(mSize) ||
+            !serialiser.write(mUserMinSize) ||
+            !serialiser.write(mFillSpace) ||
+            !serialiser.write(mClipContent)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         for (const NodePath* neighbour : { &neighbours.up, &neighbours.down, &neighbours.left, &neighbours.right }) {
-            if (const Failure failure = neighbour->serialise(file))
+            if (const Failure failure = neighbour->serialise(serialiser))
                 return failure;
         }
 
         return Success;
     }
 
-    Failure UINode::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure UINode::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(mSize) ||
-            !file.read(mUserMinSize) ||
-            !file.read(mFillSpace) ||
-            !file.read(mClipContent)
+            !deserialiser.read(mSize) ||
+            !deserialiser.read(mUserMinSize) ||
+            !deserialiser.read(mFillSpace) ||
+            !deserialiser.read(mClipContent)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         for (NodePath* neighbour : { &neighbours.up, &neighbours.down, &neighbours.left, &neighbours.right }) {
-            if (const Failure failure = neighbour->deserialise(file))
+            if (const Failure failure = neighbour->deserialise(deserialiser))
                 return failure;
         }
 

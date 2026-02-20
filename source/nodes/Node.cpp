@@ -1,16 +1,15 @@
 #include <m3ds/nodes/Node.hpp>
 
-#include <queue>
 #include <stack>
-
-#include <m3ds/utils/Frame.hpp>
 
 #include <m3ds/nodes/Root.hpp>
 
-#include "m3ds/utils/binding/Registry.hpp"
+#include <m3ds/utils/binding/Registry.hpp>
 
 #include <m3ds/nodes/Viewport.hpp>
 #include <m3ds/nodes/CanvasLayer.hpp>
+
+#include <m3ds/types/Signal.hpp>
 
 namespace M3DS {
 
@@ -41,6 +40,13 @@ namespace M3DS {
 
     std::span<const std::unique_ptr<Node>> Node::getChildren() noexcept {
         return mChildren;
+    }
+
+    Node::~Node() noexcept {
+        if (mRoot)
+            mRoot->disableUpdate(this);
+        for (auto* signal : mIncomingConnections | std::views::keys)
+            erase_if(signal->mConnections, [this](const auto& pair) { return pair.first == this; });
     }
 
     Node* Node::getParent() noexcept {
@@ -213,14 +219,6 @@ namespace M3DS {
         return curr;
     }
 
-    // Node* Node::getNode(std::string path) noexcept {
-    //     return getNode(NodePath{ std::move(path) });
-    // }
-    //
-    // const Node* Node::getNode(std::string path) const noexcept {
-    //     return getNodeConst(NodePath{ std::move(path) });
-    // }
-
     Node* Node::getChild(const std::size_t idx) noexcept {
         return mChildren[idx].get();
     }
@@ -340,12 +338,12 @@ namespace M3DS {
 
     void Node::free() {
         if (Node* parent = getParent())
-            erase_if(parent->mChildren, [this](const std::unique_ptr<Node>& n) { return n.get() == this; });
+            std::ignore = parent->removeChild(this);
     }
 
-    Failure Node::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure Node::serialise(Serialiser& serialiser) const noexcept {
         // TODO: serialise process enabled
-        if (const Failure failure = Object::serialise(file))
+        if (const Failure failure = Object::serialise(serialiser))
             return failure;
 
         const std::string_view name = mName == getClass() ? std::string_view{} : mName;
@@ -354,24 +352,24 @@ namespace M3DS {
             return Failure{ ErrorCode::invalid_data };
 
         if (
-            !file.write(visible) ||
-            !file.write(static_cast<std::uint16_t>(name.size())) ||
-            !file.write(std::span{name})
+            !serialiser.write(visible) ||
+            !serialiser.write(static_cast<std::uint16_t>(name.size())) ||
+            !serialiser.write(std::span{name})
         )
             return Failure{ ErrorCode::file_write_fail };
 
-        const auto childCountPos = file.tell();
+        const auto childCountPos = serialiser.tell();
 
         std::uint16_t childCount {};
 
-        if (!file.write(static_cast<std::uint16_t>(0)))
+        if (!serialiser.write(static_cast<std::uint16_t>(0)))
             return Failure{ ErrorCode::file_write_fail };
 
         for (const std::unique_ptr<Node>& child : mChildren) {
             if (child->isHelper()) continue;
 
             ++childCount;
-            if (const Failure failure = child->serialise(file))
+            if (const Failure failure = child->serialise(serialiser))
                 return failure;
         }
 
@@ -379,41 +377,41 @@ namespace M3DS {
             return Failure{ ErrorCode::invalid_data };
 
         if (
-            !file.seek(childCountPos) ||
-            !file.write(childCount) ||
-            !file.seek(0, std::ios::end)
+            !serialiser.seek(childCountPos) ||
+            !serialiser.write(childCount) ||
+            !serialiser.seek(0, std::ios::end)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure Node::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = Object::deserialise(file))
+    Failure Node::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = Object::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(visible))
+        if (!deserialiser.read(visible))
             return Failure{ ErrorCode::file_read_fail };
 
         std::uint16_t nameLength;
-        if (!file.read(nameLength))
+        if (!deserialiser.read(nameLength))
             return Failure{ ErrorCode::file_read_fail };
 
         if (nameLength > 1024)
             return Failure{ ErrorCode::invalid_data };
 
         mName.resize(nameLength);
-        if (!file.read(std::span{mName}))
+        if (!deserialiser.read(std::span{mName}))
             return Failure{ ErrorCode::file_read_fail };
 
         std::uint16_t childCount;
-        if (!file.read(childCount))
+        if (!deserialiser.read(childCount))
             return Failure{ ErrorCode::file_read_fail };
 
         mChildren.reserve(mChildren.size() + childCount);
 
         for (std::uint16_t i{}; i < childCount; ++i) {
-            if (std::expected exp = Registry::deserialise(file))
+            if (std::expected exp = Registry::deserialise(deserialiser))
                 emplaceChild(object_pointer_cast<Node>(std::move(exp.value())));
             else
                 return exp.error();

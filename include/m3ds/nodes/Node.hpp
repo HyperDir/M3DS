@@ -18,12 +18,15 @@ namespace M3DS {
     class CanvasLayer;
     class Viewport;
     class Frame;
+    class BaseSignal;
 
     class Node : public Object {
         M_CLASS(Node, Object)
         friend class Root;
         friend class CanvasLayer;
         friend class Viewport;
+
+        friend class BaseSignal;
     public:
         bool visible = true;
         // bool paused = false;
@@ -34,6 +37,7 @@ namespace M3DS {
         [[nodiscard]] auto getChildrenOfType() noexcept;
 
         [[nodiscard]] Node() noexcept = default;
+        ~Node() noexcept override;
 
         Node(const Node&) = delete;
         Node& operator=(const Node&) = delete;
@@ -66,8 +70,8 @@ namespace M3DS {
         template <script_type ScriptType, typename... Args>
         ScriptType* emplaceChild(Args&&... args);
 
-        [[nodiscard]] std::unique_ptr<Node> removeChild(const Node* child) noexcept;
-        [[nodiscard]] std::unique_ptr<Node> removeChild(std::size_t idx) noexcept;
+        std::unique_ptr<Node> removeChild(const Node* child) noexcept;
+        std::unique_ptr<Node> removeChild(std::size_t idx) noexcept;
 
         [[nodiscard]] bool isHelper() const noexcept;
 
@@ -112,6 +116,8 @@ namespace M3DS {
         Viewport* mViewport {};
         const CanvasLayer* mCanvasLayer {};
         std::vector<std::unique_ptr<Node>> mChildren {};
+
+        std::vector<std::pair<BaseSignal*, const MutableGenericMethod*>> mIncomingConnections {};
 
         std::unique_ptr<BaseScript> mScript {};
     };

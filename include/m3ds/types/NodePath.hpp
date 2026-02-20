@@ -5,6 +5,8 @@
 #include <m3ds/types/Failure.hpp>
 #include <m3ds/utils/BinaryFile.hpp>
 
+#include "m3ds/utils/Serialiser.hpp"
+
 namespace M3DS {
     class NodePath {
         std::string mPath {};
@@ -68,13 +70,13 @@ namespace M3DS {
             return Success;
         }
 
-        [[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept {
+        [[nodiscard]] Failure deserialise(Deserialiser& deserialiser) noexcept {
             std::uint16_t length;
-            if (!file.read(length))
+            if (!deserialiser.read(length))
                 return Failure{ ErrorCode::file_read_fail };
 
             mPath.resize(length);
-            if (!file.read(std::span{mPath}))
+            if (!deserialiser.read(std::span{mPath}))
                 return Failure{ ErrorCode::file_read_fail };
 
             return Success;

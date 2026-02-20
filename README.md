@@ -278,12 +278,12 @@ class MyNode : public M3DS::Node {
     M_CLASS(MyNode, M3DS::Node);
 };
 
-M3DS::Failure MyNode::serialise(M3DS::BinaryOutFileAccessor file) const noexcept {
-    return SuperType::serialise(file);
+M3DS::Failure MyNode::serialise(M3DS::Serialiser& serialiser) const noexcept {
+    return SuperType::serialise(serialiser);
 }
 
-M3DS::Failure MyNode::deserialise(M3DS::BinaryInFileAccessor file) noexcept {
-    return SuperType::deserialise(file);
+M3DS::Failure MyNode::deserialise(M3DS::Deserialiser& deserialiser) noexcept {
+    return SuperType::deserialise(deserialiser);
 }
 
 const M3DS::GenericMember* MyNode::getMemberStatic(const std::string_view name) noexcept {

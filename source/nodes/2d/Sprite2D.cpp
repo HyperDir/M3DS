@@ -5,30 +5,30 @@ namespace M3DS {
         : spritesheet(std::move(sheet))
     {}
 
-    Failure Sprite2D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Sprite2D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(frame) ||
-            !file.write(centre)
+            !serialiser.write(frame) ||
+            !serialiser.write(centre)
         )
             return Failure{ ErrorCode::file_write_fail };
 
-        return spritesheet.serialise(file);
+        return spritesheet.serialise(serialiser);
     }
 
-    Failure Sprite2D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Sprite2D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(frame) ||
-            !file.read(centre)
+            !deserialiser.read(frame) ||
+            !deserialiser.read(centre)
         )
             return Failure{ ErrorCode::file_read_fail };
 
-        return spritesheet.deserialise(file);
+        return spritesheet.deserialise(deserialiser);
     }
 
     void Sprite2D::draw(RenderTarget2D& target) {

@@ -5,21 +5,21 @@ namespace M3DS {
         setClipContent(true);
     }
 
-    Failure ScrollContainer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure ScrollContainer::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(mScrollMode) || !file.write(mScrollPosition))
+        if (!serialiser.write(mScrollMode) || !serialiser.write(mScrollPosition))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure ScrollContainer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure ScrollContainer::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(mScrollMode) || !file.read(mScrollPosition))
+        if (!deserialiser.read(mScrollMode) || !deserialiser.read(mScrollPosition))
             return Failure{ ErrorCode::file_read_fail };
 
         return Success;

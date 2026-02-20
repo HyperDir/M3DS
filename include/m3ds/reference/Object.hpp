@@ -6,11 +6,12 @@
 #include <m3ds/utils/binding/BoundMethod.hpp>
 
 #include <m3ds/types/Failure.hpp>
-#include <m3ds/utils/BinaryFile.hpp>
+#include <m3ds/utils/Serialiser.hpp>
 
 namespace M3DS {
     class Object {
         friend class Registry;
+        friend class ResourceRegistry;
     public:
         using SelfType = Object;
         virtual ~Object() = default;
@@ -30,8 +31,8 @@ namespace M3DS {
         [[nodiscard]] static const GenericMember* getMemberStatic(std::string_view) noexcept;
         [[nodiscard]] virtual const GenericMember* getMember(std::string_view name) noexcept;
     protected:
-        [[nodiscard]] virtual Failure serialise(BinaryOutFileAccessor file) const noexcept;
-        [[nodiscard]] virtual Failure deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] virtual Failure serialise(Serialiser& serialiser) const noexcept;
+        [[nodiscard]] virtual Failure deserialise(Deserialiser& deserialiser) noexcept;
     };
 
     template <typename T> concept ObjectType = std::derived_from<T, Object>;
@@ -138,13 +139,13 @@ static_assert(std::string_view{#m_class}.size() < std::numeric_limits<std::uint8
     return getMemberStatic(name);                                                                               \
 }                                                                                                               \
 protected:                                                                                                      \
-[[nodiscard]] M3DS::Failure serialise(M3DS::BinaryOutFileAccessor file) const noexcept override;                \
-[[nodiscard]] M3DS::Failure deserialise(M3DS::BinaryInFileAccessor file) noexcept override;                     \
+[[nodiscard]] M3DS::Failure serialise(M3DS::Serialiser& serialiser) const noexcept override;                    \
+[[nodiscard]] M3DS::Failure deserialise(M3DS::Deserialiser& deserialiser) noexcept override;                    \
 private:
 
 #define REGISTER_NO_METHODS(CLASS_NAME) M3DS::BoundMethodPair CLASS_NAME::getMethodStatic(const std::string_view name) noexcept { return SuperType::getMethodStatic(name); }
 #define REGISTER_METHODS(CLASS_NAME, ...)                                                                       \
-BoundMethodPair CLASS_NAME::getMethodStatic(const std::string_view name) noexcept {                             \
+M3DS::BoundMethodPair CLASS_NAME::getMethodStatic(const std::string_view name) noexcept {                       \
     static constexpr M3DS::MethodPack methods { __VA_ARGS__ };                                                  \
     for (const M3DS::BoundMethodPair& pair : methods.getMethods()) {                                            \
         const auto& [constMethod, mutableMethod] = pair;                                                        \

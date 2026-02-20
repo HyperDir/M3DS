@@ -168,12 +168,12 @@ namespace M3DS {
         return mTarget.getSize();
     }
 
-    Failure Viewport::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure Viewport::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure Viewport::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure Viewport::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
 

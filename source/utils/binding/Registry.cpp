@@ -4,18 +4,20 @@
 
 namespace M3DS {
     std::expected<std::unique_ptr<Object>, Failure> Registry::deserialise(const std::filesystem::path& path) noexcept {
-        if (BinaryInFile file { path })
-            return deserialise(file.getAccessor());
+        if (BinaryInFile file { path }) {
+            Deserialiser deserialiser { file.getAccessor() };
+            return deserialise(deserialiser);
+        }
         return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
     }
 
-    std::expected<std::unique_ptr<Object>, Failure> Registry::deserialise(const BinaryInFileAccessor file) noexcept {
+    std::expected<std::unique_ptr<Object>, Failure> Registry::deserialise(Deserialiser& deserialiser) noexcept {
         std::uint8_t classNameLength;
-        if (!file.read(classNameLength))
+        if (!deserialiser.read(classNameLength))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
         std::string className {};
         className.resize(classNameLength);
-        if (!file.read(std::span{className}))
+        if (!deserialiser.read(std::span{className}))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         Debug::log<1>("Deserialising class: {}...", className);
@@ -30,21 +32,22 @@ namespace M3DS {
             return std::unexpected{ Failure{ ErrorCode::non_default_constructible_class } };
         }
 
-        if (const Failure failure = ptr->deserialise(file))
+        if (const Failure failure = ptr->deserialise(deserialiser))
             return std::unexpected{ failure };
 
         return ptr;
     }
 
     Failure Registry::serialise(const Object& object, const std::filesystem::path& path) noexcept {
-        BinaryOutFile file { path };
-        if (!file)
-            return Failure{ ErrorCode::file_open_fail };
-        return serialise(object, file.getAccessor());
+        if (BinaryOutFile file { path }) {
+            Serialiser serialiser { file.getAccessor() };
+            return serialise(object, serialiser);
+        }
+        return Failure{ ErrorCode::file_open_fail };
     }
 
-    Failure Registry::serialise(const Object& object, BinaryOutFileAccessor file) noexcept {
-        return object.serialise(file);
+    Failure Registry::serialise(const Object& object, Serialiser& serialiser) noexcept {
+        return object.serialise(serialiser);
     }
 
     void Registry::clear() noexcept {

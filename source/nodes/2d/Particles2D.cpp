@@ -6,27 +6,27 @@ namespace M3DS {
             mParticles.clear();
     }
 
-    Failure Particles2D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Particles2D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(oneShot))
+        if (!serialiser.write(oneShot))
             return Failure{ ErrorCode::file_write_fail };
 
-        if (const Failure failure = SuperType::serialise(file))
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         return Success;
     }
 
-    Failure Particles2D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Particles2D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(oneShot))
+        if (!deserialiser.read(oneShot))
             return Failure{ ErrorCode::file_read_fail };
 
-        if (const Failure failure = SuperType::deserialise(file))
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         return Success;

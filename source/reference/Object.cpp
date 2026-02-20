@@ -26,22 +26,22 @@ namespace M3DS {
         return getMemberStatic(name);
     }
 
-    Failure Object::serialise(const BinaryOutFileAccessor file) const noexcept {
+    Failure Object::serialise(Serialiser& serialiser) const noexcept {
         const std::string_view className = getClass();
 
         if (className.length() > std::numeric_limits<std::uint8_t>::max())
             return Failure{ ErrorCode::out_of_bounds };
 
         if (
-            !file.write(static_cast<std::uint8_t>(className.length())) ||
-            !file.write(std::span{className})
+            !serialiser.write(static_cast<std::uint8_t>(className.length())) ||
+            !serialiser.write(std::span{className})
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure Object::deserialise([[maybe_unused]] const BinaryInFileAccessor file) noexcept {
+    Failure Object::deserialise([[maybe_unused]] Deserialiser& deserialiser) noexcept {
         return Success;
     }
 

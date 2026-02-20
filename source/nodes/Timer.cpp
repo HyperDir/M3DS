@@ -35,34 +35,34 @@ namespace M3DS {
         return duration - mElapsed;
     }
 
-    Failure Timer::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Timer::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(duration) ||
-            !file.write(oneShot) ||
-            !file.write(mActive) ||
-            !file.write(mElapsed)
+            !serialiser.write(duration) ||
+            !serialiser.write(oneShot) ||
+            !serialiser.write(mActive) ||
+            !serialiser.write(mElapsed)
         )
             return Failure{ ErrorCode::file_write_fail };
 
-        return timeout.serialise(file);
+        return timeout.serialise(this, serialiser);
     }
 
-    Failure Timer::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Timer::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(duration) ||
-            !file.read(oneShot) ||
-            !file.read(mActive) ||
-            !file.read(mElapsed)
+            !deserialiser.read(duration) ||
+            !deserialiser.read(oneShot) ||
+            !deserialiser.read(mActive) ||
+            !deserialiser.read(mElapsed)
         )
             return Failure{ ErrorCode::file_write_fail };
 
-        return timeout.deserialise(file);
+        return timeout.deserialise(this, deserialiser);
     }
 
     void Timer::update(const Seconds<float> delta) {
@@ -75,7 +75,7 @@ namespace M3DS {
                     stop();
                 else
                     mElapsed -= duration;
-                timeout.emit(this);
+                timeout.emit();
             }
         }
     }

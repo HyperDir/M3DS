@@ -15,12 +15,12 @@ namespace M3DS {
         }
     }
 
-    Failure CanvasLayer::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure CanvasLayer::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure CanvasLayer::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure CanvasLayer::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
 

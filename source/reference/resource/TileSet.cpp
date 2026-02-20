@@ -1,29 +1,29 @@
 #include <m3ds/reference/resource/TileSet.hpp>
 
 namespace M3DS {
-    Failure TileSet::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = Resource::serialise(file))
+    Failure TileSet::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = Resource::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(static_cast<std::uint16_t>(tiles.size())) ||
-            !file.write(std::span{tiles})
+            !serialiser.write(static_cast<std::uint16_t>(tiles.size())) ||
+            !serialiser.write(std::span{tiles})
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure TileSet::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = Resource::deserialise(file))
+    Failure TileSet::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = Resource::deserialise(deserialiser))
             return failure;
 
         std::uint16_t tileCount;
-        if (!file.read(tileCount))
+        if (!deserialiser.read(tileCount))
             return Failure{ ErrorCode::file_read_fail };
 
         tiles.resize(tileCount);
-        if (!file.read(std::span{tiles}))
+        if (!deserialiser.read(std::span{tiles}))
             return Failure{ ErrorCode::file_read_fail };
 
         return Success;

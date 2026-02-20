@@ -43,8 +43,8 @@ namespace M3DS {
         [[nodiscard]] explicit operator bool() const noexcept;
         [[nodiscard]] bool operator==(const SpriteSheet& other) const noexcept;
 
-        [[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept;
-        [[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] Failure serialise(Serialiser& serialiser) const noexcept;
+        [[nodiscard]] Failure deserialise(Deserialiser& deserialiser) noexcept;
 
         [[nodiscard]] Texture& getTexture() noexcept;
         [[nodiscard]] const Texture& getTexture() const noexcept;

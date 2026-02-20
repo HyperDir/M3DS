@@ -9,12 +9,12 @@ namespace M3DS {
         return maxSize;
     }
 
-    Failure Container::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure Container::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure Container::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure Container::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
 

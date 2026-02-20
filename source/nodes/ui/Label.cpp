@@ -37,8 +37,8 @@ namespace M3DS {
         queueResize();
     }
 
-    Failure Label::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Label::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (mText.size() > std::numeric_limits<std::uint16_t>::max())
@@ -47,42 +47,42 @@ namespace M3DS {
         const bool defaultFont = (mFont == Font::getDefaultFont());
 
         if (
-            !file.write(static_cast<std::uint16_t>(mText.size())) ||
-            !file.write(std::span{mText}) ||
-            !file.write(mCapitalise) ||
-            !file.write(mJustify) ||
-            !file.write(defaultFont)
+            !serialiser.write(static_cast<std::uint16_t>(mText.size())) ||
+            !serialiser.write(std::span{mText}) ||
+            !serialiser.write(mCapitalise) ||
+            !serialiser.write(mJustify) ||
+            !serialiser.write(defaultFont)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         if (defaultFont)
             return Success;
-        return M3DS::serialise(mFont.get(), file);
+        return M3DS::serialise(mFont.get(), serialiser);
     }
 
-    Failure Label::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Label::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         std::uint16_t length;
-        if (!file.read(length))
+        if (!deserialiser.read(length))
             return Failure{ ErrorCode::file_read_fail };
 
         mText.resize(length);
 
         bool defaultFont;
         if (
-            !file.read(std::span{mText}) ||
-            !file.read(mCapitalise) ||
-            !file.read(mJustify) ||
-            !file.read(defaultFont)
+            !deserialiser.read(std::span{mText}) ||
+            !deserialiser.read(mCapitalise) ||
+            !deserialiser.read(mJustify) ||
+            !deserialiser.read(defaultFont)
         )
             return Failure{ ErrorCode::file_read_fail };
 
         if (defaultFont)
             return Success;
 
-        return M3DS::deserialise(mFont, file);
+        return M3DS::deserialise(mFont, deserialiser);
     }
 
     char Label::getFinalChar(const char c) const noexcept {

@@ -69,10 +69,11 @@ namespace M3DS {
             if (aptShouldClose())
                 break;
 #endif
-            DrawEnvironment _ {};
+            {
+                DrawEnvironment _ {};
 
-            std::invoke(callable, frameTimer());
-
+                std::invoke(callable, frameTimer());
+            }
             while (!mFreeQueue.empty()) {
                 mFreeQueue.front()->free();
                 mFreeQueue.pop();

@@ -74,21 +74,21 @@ namespace M3DS {
         return getGlobalTransform().position;
     }
 
-    Failure CanvasItem::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure CanvasItem::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(mTransform))
+        if (!serialiser.write(mTransform))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure CanvasItem::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure CanvasItem::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(mTransform))
+        if (!deserialiser.read(mTransform))
             return Failure{ ErrorCode::file_read_fail };
 
         return Success;

@@ -65,38 +65,38 @@ namespace M3DS {
         return Success;
     }
 
-    Failure deserialiseCollisionShape(SPhys::Shape3D& shape, BinaryInFileAccessor file) noexcept {
+    Failure deserialiseCollisionShape(SPhys::Shape3D& shape, Deserialiser& deserialiser) noexcept {
         std::uint8_t index;
-        if (!file.read(index))
+        if (!deserialiser.read(index))
             return Failure{ ErrorCode::file_read_fail };
 
         shape = variantFromIndex<SPhys::Shape3D>(index);
         if (!shape.visit(
             [&](auto& s) {
-                return file.read(s);
+                return deserialiser.read(s);
             }
         ))
             return Failure{ ErrorCode::file_read_fail };
         return Success;
     }
 
-    Failure CollisionObject3D::serialise(const BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure CollisionObject3D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(getLayer()) || !file.write(getMask()) || !file.write(isCollisionDisabled()))
+        if (!serialiser.write(getLayer()) || !serialiser.write(getMask()) || !serialiser.write(isCollisionDisabled()))
             return Failure{ ErrorCode::file_write_fail };
 
-        return serialiseCollisionShape(getCollisionObject()->getLocalShape(), file);
+        return serialiseCollisionShape(getCollisionObject()->getLocalShape(), serialiser);
     }
 
-    Failure CollisionObject3D::deserialise(const BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure CollisionObject3D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         std::uint32_t layer, mask;
         bool collisionDisabled;
-        if (!file.read(layer) || !file.read(mask) || !file.read(collisionDisabled))
+        if (!deserialiser.read(layer) || !deserialiser.read(mask) || !deserialiser.read(collisionDisabled))
             return Failure{ ErrorCode::file_read_fail };
 
         if (collisionDisabled)
@@ -109,7 +109,7 @@ namespace M3DS {
 
         SPhys::Shape3D shape {};
 
-        if (const Failure failure = deserialiseCollisionShape(shape, file))
+        if (const Failure failure = deserialiseCollisionShape(shape, deserialiser))
             return failure;
 
         getCollisionObject()->setLocalShape(shape);

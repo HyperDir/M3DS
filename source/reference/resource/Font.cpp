@@ -218,32 +218,32 @@ namespace M3DS {
         return defaultFont;
     }
 
-    Failure Font::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = mTexture.serialise(file))
+    Failure Font::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = mTexture.serialise(serialiser))
             return failure;
 
         if (
-            !file.write(mLineHeight) ||
-            !file.write(mLineSpacing) ||
-            !file.write(mSpaceSize) ||
-            !file.write(mLetterSpacing) ||
-            !file.write(mGlyphs)
+            !serialiser.write(mLineHeight) ||
+            !serialiser.write(mLineSpacing) ||
+            !serialiser.write(mSpaceSize) ||
+            !serialiser.write(mLetterSpacing) ||
+            !serialiser.write(mGlyphs)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure Font::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = mTexture.deserialise(file))
+    Failure Font::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = mTexture.deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(mLineHeight) ||
-            !file.read(mLineSpacing) ||
-            !file.read(mSpaceSize) ||
-            !file.read(mLetterSpacing) ||
-            !file.read(mGlyphs)
+            !deserialiser.read(mLineHeight) ||
+            !deserialiser.read(mLineSpacing) ||
+            !deserialiser.read(mSpaceSize) ||
+            !deserialiser.read(mLetterSpacing) ||
+            !deserialiser.read(mGlyphs)
         )
             return Failure{ ErrorCode::file_write_fail };
 

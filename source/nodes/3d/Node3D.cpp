@@ -85,21 +85,21 @@ namespace M3DS {
         }
     }
 
-    Failure Node3D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure Node3D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
-        if (!file.write(mTransform))
+        if (!serialiser.write(mTransform))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure Node3D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure Node3D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
-        if (!file.read(mTransform))
+        if (!deserialiser.read(mTransform))
             return Failure{ ErrorCode::file_read_fail };
 
         mGlobalTransformDirty = true;

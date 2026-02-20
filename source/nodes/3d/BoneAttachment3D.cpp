@@ -35,12 +35,12 @@ namespace M3DS {
         mMeshInstance = {};
     }
 
-    Failure BoneAttachment3D::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure BoneAttachment3D::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure BoneAttachment3D::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure BoneAttachment3D::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
 

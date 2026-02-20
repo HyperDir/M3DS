@@ -1,12 +1,12 @@
 #include <m3ds/nodes/2d/PhysicsBody2D.hpp>
 
 namespace M3DS {
-    Failure PhysicsBody2D::serialise(BinaryOutFileAccessor file) const noexcept {
-        return SuperType::serialise(file);
+    Failure PhysicsBody2D::serialise(Serialiser& serialiser) const noexcept {
+        return SuperType::serialise(serialiser);
     }
 
-    Failure PhysicsBody2D::deserialise(BinaryInFileAccessor file) noexcept {
-        return SuperType::deserialise(file);
+    Failure PhysicsBody2D::deserialise(Deserialiser& deserialiser) noexcept {
+        return SuperType::deserialise(deserialiser);
     }
 
     REGISTER_NO_METHODS(PhysicsBody2D);

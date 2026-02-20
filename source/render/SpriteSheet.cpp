@@ -14,25 +14,25 @@ namespace M3DS {
         return mTexture == other.mTexture && mFrames == other.mFrames;
     }
 
-    Failure SpriteSheet::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = M3DS::serialise(getPath(), file))
+    Failure SpriteSheet::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = M3DS::serialise(getPath(), serialiser))
             return failure;
 
         if (mFrames.x > 256 || mFrames.y > 256)
             return Failure{ ErrorCode::invalid_data };
-        if (!file.write(getFrameSize()))
+        if (!serialiser.write(getFrameSize()))
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure SpriteSheet::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure SpriteSheet::deserialise(Deserialiser& deserialiser) noexcept {
         std::filesystem::path path {};
-        if (const Failure failure = M3DS::deserialise(path, file))
+        if (const Failure failure = M3DS::deserialise(path, deserialiser))
             return failure;
 
         Vec2<std::uint32_t> frameCount;
-        if (!file.read(frameCount))
+        if (!deserialiser.read(frameCount))
             return Failure{ ErrorCode::file_read_fail };
 
         if (frameCount.x > 256 || frameCount.y > 256)

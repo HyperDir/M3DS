@@ -1,34 +1,34 @@
 #include <m3ds/nodes/ui/ProgressBar.hpp>
 
 namespace M3DS {
-    Failure ProgressBar::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = SuperType::serialise(file))
+    Failure ProgressBar::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = SuperType::serialise(serialiser))
             return failure;
 
         if (
-            !file.write(fillMode) ||
-            !file.write(value) ||
-            !file.write(minValue) ||
-            !file.write(maxValue) ||
-            !file.write(backgroundColour) ||
-            !file.write(fillColour)
+            !serialiser.write(fillMode) ||
+            !serialiser.write(value) ||
+            !serialiser.write(minValue) ||
+            !serialiser.write(maxValue) ||
+            !serialiser.write(backgroundColour) ||
+            !serialiser.write(fillColour)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure ProgressBar::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = SuperType::deserialise(file))
+    Failure ProgressBar::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = SuperType::deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(fillMode) ||
-            !file.read(value) ||
-            !file.read(minValue) ||
-            !file.read(maxValue) ||
-            !file.read(backgroundColour) ||
-            !file.read(fillColour)
+            !deserialiser.read(fillMode) ||
+            !deserialiser.read(value) ||
+            !deserialiser.read(minValue) ||
+            !deserialiser.read(maxValue) ||
+            !deserialiser.read(backgroundColour) ||
+            !deserialiser.read(fillColour)
         )
             return Failure{ ErrorCode::file_read_fail };
 

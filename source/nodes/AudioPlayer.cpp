@@ -78,12 +78,12 @@ namespace M3DS {
     }
 #endif
 
-    Failure AudioPlayer::serialise([[maybe_unused]] BinaryOutFileAccessor file) const noexcept {
+    Failure AudioPlayer::serialise([[maybe_unused]] Serialiser& serialiser) const noexcept {
         Debug::err("AudioPlayer Serialisation not implemented!");
         return Failure{ ErrorCode::not_implemented };
     }
 
-    Failure AudioPlayer::deserialise([[maybe_unused]] BinaryInFileAccessor file) noexcept {
+    Failure AudioPlayer::deserialise([[maybe_unused]] Deserialiser& deserialiser) noexcept {
         Debug::err("AudioPlayer Serialisation not implemented!");
         return Failure{ ErrorCode::not_implemented };
     }

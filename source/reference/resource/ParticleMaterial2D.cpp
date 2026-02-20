@@ -1,48 +1,48 @@
 #include <m3ds/reference/resource/ParticleMaterial2D.hpp>
 
 namespace M3DS {
-    Failure ParticleMaterial2D::serialise(BinaryOutFileAccessor file) const noexcept {
-        if (const Failure failure = texture.serialise(file))
+    Failure ParticleMaterial2D::serialise(Serialiser& serialiser) const noexcept {
+        if (const Failure failure = texture.serialise(serialiser))
             return failure;
 
         if (
-            !file.write(frame) ||
-            !file.write(count) ||
-            !file.write(duration) ||
-            !file.write(startAngle) ||
-            !file.write(speed) ||
-            !file.write(angularSpeed) ||
-            !file.write(orbitSpeed) ||
-            !file.write(linearAcceleration) ||
-            !file.write(tangentialAcceleration) ||
-            !file.write(angularAcceleration) ||
-            !file.write(orbitAcceleration) ||
-            !file.write(scale) ||
-            !file.write(globalAcceleration)
+            !serialiser.write(frame) ||
+            !serialiser.write(count) ||
+            !serialiser.write(duration) ||
+            !serialiser.write(startAngle) ||
+            !serialiser.write(speed) ||
+            !serialiser.write(angularSpeed) ||
+            !serialiser.write(orbitSpeed) ||
+            !serialiser.write(linearAcceleration) ||
+            !serialiser.write(tangentialAcceleration) ||
+            !serialiser.write(angularAcceleration) ||
+            !serialiser.write(orbitAcceleration) ||
+            !serialiser.write(scale) ||
+            !serialiser.write(globalAcceleration)
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    Failure ParticleMaterial2D::deserialise(BinaryInFileAccessor file) noexcept {
-        if (const Failure failure = texture.deserialise(file))
+    Failure ParticleMaterial2D::deserialise(Deserialiser& deserialiser) noexcept {
+        if (const Failure failure = texture.deserialise(deserialiser))
             return failure;
 
         if (
-            !file.read(frame) ||
-            !file.read(count) ||
-            !file.read(duration) ||
-            !file.read(startAngle) ||
-            !file.read(speed) ||
-            !file.read(angularSpeed) ||
-            !file.read(orbitSpeed) ||
-            !file.read(linearAcceleration) ||
-            !file.read(tangentialAcceleration) ||
-            !file.read(angularAcceleration) ||
-            !file.read(orbitAcceleration) ||
-            !file.read(scale) ||
-            !file.read(globalAcceleration)
+            !deserialiser.read(frame) ||
+            !deserialiser.read(count) ||
+            !deserialiser.read(duration) ||
+            !deserialiser.read(startAngle) ||
+            !deserialiser.read(speed) ||
+            !deserialiser.read(angularSpeed) ||
+            !deserialiser.read(orbitSpeed) ||
+            !deserialiser.read(linearAcceleration) ||
+            !deserialiser.read(tangentialAcceleration) ||
+            !deserialiser.read(angularAcceleration) ||
+            !deserialiser.read(orbitAcceleration) ||
+            !deserialiser.read(scale) ||
+            !deserialiser.read(globalAcceleration)
         )
             return Failure{ ErrorCode::file_read_fail };
 

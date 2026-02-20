@@ -39,7 +39,7 @@ namespace M3DS {
         [[nodiscard]] const Member<T>* getMember() const noexcept;
 
         [[nodiscard]] std::expected<void, Failure> serialise(BinaryOutFileAccessor& file) const noexcept;
-        [[nodiscard]] static std::expected<AnimationTrack, Failure> deserialise(BinaryInFileAccessor& file) noexcept;
+        [[nodiscard]] static std::expected<AnimationTrack, Failure> deserialise(Deserialiser& deserialiser) noexcept;
     private:
         const Member<T>* mMember {};
         std::vector<TrackEntry<T>> mEntries {};
@@ -80,7 +80,7 @@ namespace M3DS {
         [[nodiscard]] constexpr std::span<const AnimationEntry> getEntries() const noexcept;
 
         [[nodiscard]] std::expected<void, Failure> serialise(BinaryOutFileAccessor file) const noexcept;
-        [[nodiscard]] static std::expected<Animation, Failure> deserialise(BinaryInFileAccessor file) noexcept;
+        [[nodiscard]] static std::expected<Animation, Failure> deserialise(Deserialiser& deserialiser) noexcept;
     private:
         std::string mName {};
         std::vector<AnimationEntry> mAnimationEntries {};
@@ -281,15 +281,15 @@ namespace M3DS {
     }
 
     template <typename T>
-    std::expected<AnimationTrack<T>, Failure> AnimationTrack<T>::deserialise(BinaryInFileAccessor& file) noexcept {
+    std::expected<AnimationTrack<T>, Failure> AnimationTrack<T>::deserialise(Deserialiser& deserialiser) noexcept {
         TrackHeader header {};
-        if (!file.read(header))
+        if (!deserialiser.read(header))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         HeapArray<char> nameData {};
         // Cannot be greater than 2x uint8_t max
         nameData.resize(header.classNameLength + header.memberNameLength);
-        if (!file.read(std::span{ nameData }))
+        if (!deserialiser.read(std::span{ nameData }))
             return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
         const std::string_view className { nameData.data(), header.classNameLength };
@@ -315,22 +315,22 @@ namespace M3DS {
             if constexpr (std::same_as<T, std::string>) {
                 std::uint8_t strLength {};
                 if (
-                    !file.read(time) ||
-                    !file.read(strLength)
+                    !deserialiser.read(time) ||
+                    !deserialiser.read(strLength)
                 )
                     return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
 
                 value.resize(strLength);
                 if (
-                    !file.read(std::span{ value }) ||
-                    !file.read(easing)
+                    !deserialiser.read(std::span{ value }) ||
+                    !deserialiser.read(easing)
                 )
                     return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             } else {
                 if (
-                    !file.read(time) ||
-                    !file.read(value) ||
-                    !file.read(easing)
+                    !deserialiser.read(time) ||
+                    !deserialiser.read(value) ||
+                    !deserialiser.read(easing)
                 )
                     return std::unexpected{ Failure{ ErrorCode::file_read_fail } };
             }

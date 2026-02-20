@@ -4,23 +4,23 @@
 #include <m3ds/types/Failure.hpp>
 
 namespace M3DS {
-    [[nodiscard]] inline Failure serialise(const std::filesystem::path& path, BinaryOutFileAccessor file) noexcept {
+    [[nodiscard]] inline Failure serialise(const std::filesystem::path& path, Serialiser& serialiser) noexcept {
         const std::string pathString = path.string();
         if (pathString.length() > 1024)
             return Failure{ ErrorCode::file_write_fail };
 
         if (
-            !file.write(static_cast<std::uint16_t>(pathString.length())) ||
-            !file.write(std::span{pathString})
+            !serialiser.write(static_cast<std::uint16_t>(pathString.length())) ||
+            !serialiser.write(std::span{pathString})
         )
             return Failure{ ErrorCode::file_write_fail };
 
         return Success;
     }
 
-    [[nodiscard]] inline Failure deserialise(std::filesystem::path& path, BinaryInFileAccessor file) noexcept {
+    [[nodiscard]] inline Failure deserialise(std::filesystem::path& path, Deserialiser& deserialiser) noexcept {
         std::uint16_t length;
-        if (!file.read(length))
+        if (!deserialiser.read(length))
             return Failure{ ErrorCode::file_read_fail };
 
         if (length > 1024)
@@ -28,7 +28,7 @@ namespace M3DS {
 
         std::string str {};
         str.resize(length);
-        if (!file.read(std::span{str}))
+        if (!deserialiser.read(std::span{str}))
             return Failure{ ErrorCode::file_read_fail };
 
         path = { std::move(str) };

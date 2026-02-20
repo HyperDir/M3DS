@@ -14,36 +14,36 @@ namespace M3DS {
         };
     }
 
-    Failure BoxStyle::serialise(BinaryOutFileAccessor file) const noexcept {
+    Failure BoxStyle::serialise(Serialiser& serialiser) const noexcept {
         if (
-            !file.write(colour) ||
-            !file.write(contentMargin)
+            !serialiser.write(colour) ||
+            !serialiser.write(contentMargin)
         )
             return { ErrorCode::file_write_fail };
 
         const bool customTexture = texture != stretchPanelTexture;
-        if (!file.write(customTexture))
+        if (!serialiser.write(customTexture))
             return { ErrorCode::file_write_fail };
 
         if (customTexture)
-            return texture.serialise(file);
+            return texture.serialise(serialiser);
 
         return Success;
     }
 
-    Failure BoxStyle::deserialise(BinaryInFileAccessor file) noexcept {
+    Failure BoxStyle::deserialise(Deserialiser& deserialiser) noexcept {
         if (
-            !file.read(colour) ||
-            !file.read(contentMargin)
+            !deserialiser.read(colour) ||
+            !deserialiser.read(contentMargin)
         )
             return { ErrorCode::file_write_fail };
 
         bool customTexture {};
-        if (!file.read(customTexture))
+        if (!deserialiser.read(customTexture))
             return { ErrorCode::file_read_fail };
 
         if (customTexture)
-            return texture.deserialise(file);
+            return texture.deserialise(deserialiser);
         
         return Success;
     }

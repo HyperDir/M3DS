@@ -10,7 +10,7 @@
 #include <m3ds/spatial/Vector2.hpp>
 #include <m3ds/utils/Units.hpp>
 
-#include <m3ds/utils/BinaryFile.hpp>
+#include "m3ds/utils/Serialiser.hpp"
 
 namespace M3DS {
 	struct UVs {
@@ -43,8 +43,8 @@ namespace M3DS {
 		[[nodiscard]] const UVs& getUvs() const noexcept;
 		[[nodiscard]] const Pixels<Vector2>& getSize() const noexcept;
 
-		[[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept;
-		[[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept;
+		[[nodiscard]] Failure serialise(Serialiser& serialiser) const noexcept;
+		[[nodiscard]] Failure deserialise(Deserialiser& deserialiser) noexcept;
 	private:
 		[[nodiscard]] explicit Texture(std::shared_ptr<TextureData> data) noexcept;
 

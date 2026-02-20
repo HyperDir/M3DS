@@ -9,13 +9,13 @@
 
 namespace M3DS {
     template <typename T>
-    concept StyleInterface = requires(T t) {
+    concept StyleInterface = requires(T t, Serialiser serialiser, Deserialiser deserialiser) {
         std::is_default_constructible_v<T>;
         { t == t } -> std::same_as<bool>;
         { t.getMinSize() } -> std::same_as<Vector2>;
         { t.contentMargin } -> std::same_as<Margin&>;
-        { t.serialise(std::declval<BinaryOutFileAccessor>()) } -> std::same_as<Failure>;
-        { t.deserialise(std::declval<BinaryInFileAccessor>()) } -> std::same_as<Failure>;
+        { t.serialise(serialiser) } -> std::same_as<Failure>;
+        { t.deserialise(deserialiser) } -> std::same_as<Failure>;
     };
 
     struct BoxStyle {
@@ -28,8 +28,8 @@ namespace M3DS {
 
         [[nodiscard]] bool operator==(const BoxStyle&) const noexcept = default;
 
-        [[nodiscard]] Failure serialise(BinaryOutFileAccessor) const noexcept;
-        [[nodiscard]] Failure deserialise(BinaryInFileAccessor) noexcept;
+        [[nodiscard]] Failure serialise(Serialiser& serialiser) const noexcept;
+        [[nodiscard]] Failure deserialise(Deserialiser& deserialiser) noexcept;
     private:
         static const Texture stretchPanelTexture;
     };
@@ -46,21 +46,21 @@ namespace M3DS {
             return Vector2{ texture.getFrameSize() };
         }
 
-        [[nodiscard]] Failure serialise(BinaryOutFileAccessor file) const noexcept {
-            if (const Failure failure = texture.serialise(file))
+        [[nodiscard]] Failure serialise(Serialiser& serialiser) const noexcept {
+            if (const Failure failure = texture.serialise(serialiser))
                 return failure;
 
-            if (!file.write(frame) || !file.write(contentMargin))
+            if (!serialiser.write(frame) || !serialiser.write(contentMargin))
                 return Failure{ ErrorCode::file_write_fail };
 
             return Success;
         }
 
-        [[nodiscard]] Failure deserialise(BinaryInFileAccessor file) noexcept {
-            if (const Failure failure = texture.deserialise(file))
+        [[nodiscard]] Failure deserialise(Deserialiser& deserialiser) noexcept {
+            if (const Failure failure = texture.deserialise(deserialiser))
                 return failure;
 
-            if (!file.read(frame) || !file.read(contentMargin))
+            if (!deserialiser.read(frame) || !deserialiser.read(contentMargin))
                 return Failure{ ErrorCode::file_read_fail };
 
             return Success;
@@ -72,29 +72,29 @@ namespace M3DS {
 
     using Style = std::variant<BoxStyle, TextureStyle>;
 
-    [[nodiscard]] inline Failure serialise(const Style& style, BinaryOutFileAccessor file) noexcept {
+    [[nodiscard]] inline Failure serialise(const Style& style, Serialiser& serialiser) noexcept {
         const std::uint8_t idx = static_cast<std::uint8_t>(style.index());
 
-        if (!file.write(idx))
+        if (!serialiser.write(idx))
             return Failure{ ErrorCode::file_write_fail };
 
         return style.visit(
             [&](const auto& s) -> Failure {
-                return s.serialise(file);
+                return s.serialise(serialiser);
             }
         );
     }
 
-    [[nodiscard]] inline Failure deserialise(Style& style, BinaryInFileAccessor file) {
+    [[nodiscard]] inline Failure deserialise(Style& style, Deserialiser& deserialiser) {
         std::uint8_t idx;
-        if (!file.read(idx))
+        if (!deserialiser.read(idx))
             return Failure{ ErrorCode::file_read_fail };
 
         style = variantFromIndex<Style>(idx);
 
         return style.visit(
             [&](auto& s) -> Failure {
-                return s.deserialise(file);
+                return s.deserialise(deserialiser);
             }
         );
     }
