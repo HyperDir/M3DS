@@ -53,9 +53,10 @@ namespace M3DS {
     template <ObjectType O>
     std::expected<std::unique_ptr<O>, Failure> Registry::deserialise(const std::filesystem::path& path) noexcept {
         BinaryInFile file { path };
+        Deserialiser deserialiser { file.getAccessor() };
         if (!file)
             return std::unexpected{ Failure{ ErrorCode::file_open_fail } };
-        return deserialise<O>(Deserialiser{ file.getAccessor() });
+        return deserialise<O>(deserialiser);
     }
 
     template <ObjectType O>

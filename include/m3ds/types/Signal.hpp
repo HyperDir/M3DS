@@ -17,23 +17,27 @@ namespace M3DS {
             disconnectAll();
         }
 
-        void connect(Node* node, const MutableGenericMethod* method) {
-            if (method) {
-                mConnections.emplace_back(node, method);
-                node->mIncomingConnections.emplace_back(this, method);
-            } else {
-                Debug::err("Invalid method passed to signal!");
+        void connect(Node& node, const MutableGenericMethod& method) {
+            mConnections.emplace_back(&node, &method);
+            node.mIncomingConnections.emplace_back(this, &method);
+        }
+
+        [[nodiscard]] Failure connect(Node& node, const std::string_view methodName) {
+            if (const MutableGenericMethod* method = node.getMethod(methodName).mutableMethod) {
+                connect(node, *method);
+                return Success;
             }
+            return { ErrorCode::invalid_method };
         }
 
-        void disconnect(Node* node, const MutableGenericMethod* method) {
-            std::erase_if(mConnections, [&](auto& pair) { return pair.first == node && pair.second == method; });
-            std::erase_if(node->mIncomingConnections, [&](auto& pair) { return pair.first == this && pair.second == method; });
+        void disconnect(Node& node, const MutableGenericMethod* method) {
+            std::erase_if(mConnections, [&](auto& pair) { return pair.first == &node && pair.second == method; });
+            std::erase_if(node.mIncomingConnections, [&](auto& pair) { return pair.first == this && pair.second == method; });
         }
 
-        void disconnect(Node* node) {
-            std::erase_if(mConnections, [node](auto& pair) { return pair.first == node; });
-            std::erase_if(node->mIncomingConnections, [this](auto& pair) { return pair.first == this; });
+        void disconnect(Node& node) {
+            std::erase_if(mConnections, [&](auto& pair) { return pair.first == &node; });
+            std::erase_if(node.mIncomingConnections, [&](auto& pair) { return pair.first == this; });
         }
 
         void disconnectAll() {
@@ -139,7 +143,7 @@ namespace M3DS {
 
                     for (auto&& [path, method] : data) {
                         if (Node* node = owner->getNode(path)) {
-                            mConnections.emplace_back(node, method);
+                            connect(*node, *method);
                         } else {
                             Debug::err("Invalid NodePath in Signal Emission! {}", path);
                         }
