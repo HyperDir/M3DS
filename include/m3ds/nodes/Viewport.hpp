@@ -8,6 +8,8 @@
 #include <m3ds/utils/Frame.hpp>
 #include <m3ds/lib/SPhys/SPhys.hpp>
 
+#include <m3ds/render/WorldEnvironment3D.hpp>
+
 #ifdef M3DS_SFML
 #include <SFML/Window/VideoMode.hpp>
 #endif
@@ -72,6 +74,8 @@ namespace M3DS {
 
         SPhys::PhysicsServer3D<> mPhysicsServer3D {};
         SPhys::PhysicsServer2D<> mPhysicsServer2D {};
+
+        WorldEnvironment3D mWorldEnv3D {};
     };
 
     constexpr auto& Viewport::getPhysicsServer3d() noexcept {

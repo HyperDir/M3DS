@@ -12,6 +12,9 @@
 #include <m3ds/spatial/Quaternion.hpp>
 #include <m3ds/spatial/Transform2D.hpp>
 
+#include <m3ds/render/Texture.hpp>
+#include <m3ds/render/SpriteSheet.hpp>
+
 #include <m3ds/utils/Debug.hpp>
 
 namespace M3DS {
@@ -94,6 +97,8 @@ namespace M3DS {
         const Object*,
         BaseScript*,
         const BaseScript*,
+        Texture,
+        SpriteSheet,
         // std::shared_ptr<Resource>,
         std::string_view
     >;

@@ -1,6 +1,6 @@
 #include <m3ds/nodes/3d/Area3D.hpp>
 
-#include "m3ds/nodes/Viewport.hpp"
+#include <m3ds/nodes/Viewport.hpp>
 
 namespace M3DS {
     bool Area3D::isOverlapping(const Area3D* other) const noexcept {

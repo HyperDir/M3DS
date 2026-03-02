@@ -4,8 +4,8 @@
 #include <m3ds/types/Margin.hpp>
 #include <m3ds/render/SpriteSheet.hpp>
 
-#include "m3ds/reference/Resource.hpp"
-#include "m3ds/render/Mesh2D.hpp"
+#include <m3ds/reference/Resource.hpp>
+#include <m3ds/render/Mesh2D.hpp>
 
 namespace M3DS {
     template <typename T>

@@ -10,7 +10,7 @@
 #include <m3ds/spatial/Vector2.hpp>
 #include <m3ds/utils/Units.hpp>
 
-#include "m3ds/utils/Serialiser.hpp"
+#include <m3ds/utils/Serialiser.hpp>
 
 namespace M3DS {
 	struct UVs {

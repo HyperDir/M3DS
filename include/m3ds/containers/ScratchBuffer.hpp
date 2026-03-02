@@ -27,7 +27,7 @@ namespace M3DS {
             return Success;
         }
 
-        [[nodiscard]] constexpr Failure emplace(std::span<const Element> elements) noexcept {
+        [[nodiscard]] constexpr Failure emplaceSpan(std::span<const Element> elements) noexcept {
             if (elements.size() + mHead + mCount >= getCurrentBuffer().end())
                 return { ErrorCode::out_of_bounds };
 

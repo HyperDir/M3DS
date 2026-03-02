@@ -32,7 +32,7 @@ namespace M3DS::Input {
         c_pad_down    = 1ul << 31,         ///< Circle Pad Down
 
         // Generic catch-all directions
-        up    = d_up    | c_pad_down,    ///< D-Pad Up or Circle Pad Up
+        up    = d_up    | c_pad_up,    ///< D-Pad Up or Circle Pad Up
         down  = d_down  | c_pad_down,    ///< D-Pad Down or Circle Pad Down
         left  = d_left  | c_pad_left,    ///< D-Pad Left or Circle Pad Left
         right = d_right | c_pad_right,   ///< D-Pad Right or Circle Pad Right

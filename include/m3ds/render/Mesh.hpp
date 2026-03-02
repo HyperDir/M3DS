@@ -31,8 +31,8 @@ namespace M3DS {
     public:
     	struct Vertex {
     		Vector3 coords {};
-    		Vector3 normal {};
     		Vector2 texCoords {};
+    		Vector3 normal {};
     		std::array<std::uint8_t, 4> boneIds {};
     		std::array<float, 4> boneWeights {};
     	};

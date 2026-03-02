@@ -5,7 +5,7 @@
 #include <m3ds/types/Failure.hpp>
 #include <m3ds/utils/BinaryFile.hpp>
 
-#include "m3ds/utils/Serialiser.hpp"
+#include <m3ds/utils/Serialiser.hpp>
 
 namespace M3DS {
     class NodePath {

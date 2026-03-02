@@ -35,6 +35,7 @@
 #include <m3ds/nodes/3d/MeshInstance.hpp>
 #include <m3ds/nodes/3d/Node3D.hpp>
 #include <m3ds/nodes/3d/PhysicsBody3D.hpp>
+#include <m3ds/nodes/3d/Sprite3D.hpp>
 #include <m3ds/nodes/3d/StaticBody3D.hpp>
 
 #include <m3ds/nodes/ui/containers/BoxContainer.hpp>
@@ -165,9 +166,11 @@ namespace M3DS {
                 MeshInstance,
                 Node3D,
                 PhysicsBody3D,
+                Sprite3D,
                 StaticBody3D,
                 BoxContainer,
                 CentreContainer,
+                Container,
                 FillContainer,
                 HBoxContainer,
                 MarginContainer,
@@ -215,6 +218,4 @@ namespace M3DS {
 #endif
         }
     };
-
-#define M3DS_REGISTRY_ENTRY(ObjectType) { #ObjectType, RegistryEntry{ []{ return static_cast<std::unique_ptr<Object>>(std::make_unique<ObjectType>()); }, ObjectType::getMemberStatic, ObjectType::getMethodStatic } }
 }

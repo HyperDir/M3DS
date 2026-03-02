@@ -2,7 +2,7 @@
 
 #include <m3ds/nodes/2d/Node2D.hpp>
 
-#include "m3ds/lib/SPhys/2D/PhysicsServer2D.hpp"
+#include <m3ds/lib/SPhys/2D/PhysicsServer2D.hpp>
 
 namespace M3DS {
     class CollisionObject2D : public Node2D {

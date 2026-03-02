@@ -1,6 +1,6 @@
 #include <m3ds/nodes/3d/KinematicBody3D.hpp>
 
-#include "m3ds/nodes/Viewport.hpp"
+#include <m3ds/nodes/Viewport.hpp>
 
 namespace M3DS {
     void KinematicBody3D::setVelocity(const Vector3& to) noexcept {

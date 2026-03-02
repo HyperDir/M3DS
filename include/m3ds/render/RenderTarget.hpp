@@ -9,10 +9,12 @@
 #include <m3ds/spatial/Matrix4x4.hpp>
 
 #include <m3ds/render/SpriteSheet.hpp>
-#include <m3ds/types/Style.hpp>
+#include <m3ds/render/Style.hpp>
 #include <m3ds/reference/resource/Font.hpp>
 
 #include <m3ds/render/Mesh2D.hpp>
+
+#include <m3ds/render/WorldEnvironment3D.hpp>
 
 namespace M3DS {
     class MeshInstance;
@@ -25,13 +27,13 @@ namespace M3DS {
     class DrawEnvironment {
         friend class Root;
 
-        DrawEnvironment() noexcept;
+        [[nodiscard]] DrawEnvironment() noexcept;
         ~DrawEnvironment() noexcept;
     };
 
     struct RenderTargetDeleter {
         void operator()(C3D_RenderTarget* target) const noexcept {
-            if (target)
+            if (target)\
                 C3D_RenderTargetDelete(target);
         }
     };
@@ -104,8 +106,6 @@ namespace M3DS {
         void enablePrimitive() noexcept;
         void disablePrimitive() noexcept;
 
-        void primitiveSendVertex(const Vertex2D& vertex) noexcept;
-
         void primitiveFlush() noexcept;
 
         void bind(C3D_Tex* texture) noexcept;
@@ -120,7 +120,7 @@ namespace M3DS {
 
         C3D_RenderTarget* mTarget;
 
-        Matrix4x4 mProjection = Matrix4x4::orthoTilt<false>(0.0, 400.0, 240.0, 0.0, 0.0, 1.0);
+        Matrix4x4 mProjection = Matrix4x4::identity();
         Matrix4x4 mCameraInverse = Matrix4x4::identity();
 
         C3D_Tex* mBoundTexture {};
@@ -134,10 +134,13 @@ namespace M3DS {
 
     class RenderTarget3D {
     public:
-        explicit RenderTarget3D(C3D_RenderTarget* target, LightEnv& lightEnv) noexcept;
+        explicit RenderTarget3D(C3D_RenderTarget* target, LightEnv& lightEnv, const WorldEnvironment3D& worldEnv) noexcept;
 
         void prepare(float iod) noexcept;
         void render(const MeshInstance& meshInstance) noexcept;
+
+        void drawSkybox() noexcept;
+        void drawSprite(const SpriteSheet& spriteSheet, const Matrix4x4& transform, std::uint32_t frame, float pixelSize, bool cullBack = false, bool billboard = false) noexcept;
 
         void setCameraPos(const Matrix4x4& transform) noexcept;
     private:
@@ -148,10 +151,16 @@ namespace M3DS {
             std::int8_t bones {};
         } uniforms;
 
+        C3D_Tex* mBoundTexture {};
+
         C3D_RenderTarget* mTarget;
         LightEnv& mLightEnv;
+        const WorldEnvironment3D& mWorldEnv;
 
+        Matrix4x4 mCamera = Matrix4x4::identity();
         Matrix4x4 mCameraInverse = Matrix4x4::identity();
         Matrix4x4 mProjection = Matrix4x4::identity();
+
+        void bind(C3D_Tex* texture) noexcept;
     };
 }

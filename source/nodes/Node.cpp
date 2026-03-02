@@ -84,7 +84,7 @@ namespace M3DS {
 
         child->mParent = this;
         if (isInTree())
-            child->notification(Notification::tree_entered);
+            child->propagateNotification(Notification::tree_entered);
 
         return child;
     }

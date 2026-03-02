@@ -6,6 +6,8 @@
 #include <m3ds/containers/ScratchBuffer.hpp>
 #include <m3ds/nodes/3d/MeshInstance.hpp>
 
+#include <m3ds/render/Mesh.hpp>
+
 namespace M3DS {
     constinit std::array shader3d = std::to_array<unsigned char>({
 #embed <3dshader.bin>
@@ -23,6 +25,96 @@ namespace M3DS {
         .bones = program.getUniformLocation("bones")
     };
 
+    constexpr std::array<Mesh::Vertex, 36> skyboxVertices {{
+        // Top Quad
+        Mesh::Vertex{ { -.5f, +.5f, -.5f }, { .25, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, -.5f }, { .5, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, +.5f }, { .25, 1 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { +.5f, +.5f, +.5f }, { .5, 1 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, +.5f }, { .25, 1 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, -.5f }, { .5, .75 }, { 0, -1, 0 } },
+
+        // Left Quad
+        Mesh::Vertex{ { -.5f, -.5f, +.5f }, { 0, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, -.5f }, { .25, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, +.5f }, { 0, .75 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { -.5f, +.5f, -.5f }, { .25, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, +.5f }, { 0, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, -.5f }, { .25, .5 }, { 0, -1, 0 } },
+
+        // Front Quad
+        Mesh::Vertex{ { -.5f, -.5f, -.5f }, { .25, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, -.5f }, { .5, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, -.5f }, { .25, .75 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { +.5f, +.5f, -.5f }, { .5, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, +.5f, -.5f }, { .25, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, -.5f }, { .5, .5 }, { 0, -1, 0 } },
+
+        // Right Quad
+        Mesh::Vertex{ { +.5f, -.5f, -.5f }, { .5, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, +.5f }, { .75, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, -.5f }, { .5, .75 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { +.5f, +.5f, +.5f }, { .75, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, -.5f }, { .5, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, +.5f }, { .75, .5 }, { 0, -1, 0 } },
+
+        // Back Quad
+        Mesh::Vertex{ { +.5f, -.5f, +.5f  }, { .75, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, +.5f  }, { 1, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, +.5f  }, { .75, .75 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { -.5f, +.5f, +.5f  }, { 1, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, +.5f, +.5f  }, { .75, .75 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, +.5f  }, { 1, .5 }, { 0, -1, 0 } },
+
+        // Bottom Quad
+        Mesh::Vertex{ { -.5f, -.5f, -.5f }, { .25, .25 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, +.5f }, { .25, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, -.5f }, { .5, .25 }, { 0, -1, 0 } },
+
+        Mesh::Vertex{ { +.5f, -.5f, +.5f }, { .5, .5 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { +.5f, -.5f, -.5f }, { .5, .25 }, { 0, -1, 0 } },
+        Mesh::Vertex{ { -.5f, -.5f, +.5f }, { .25, .5 }, { 0, -1, 0 } },
+    }};
+
+    void RenderTarget3D::bind(C3D_Tex* texture) noexcept {
+        if (mBoundTexture == texture)
+            return;
+
+        C3D_TexEnv* env0 = C3D_GetTexEnv(0);
+        C3D_TexEnv* env1 = C3D_GetTexEnv(1);
+
+        C3D_TexEnvInit(env0);
+
+        if (texture) {
+            if (mLightEnv.isToonShaded()) {
+                C3D_TexEnvSrc(env0, C3D_Both, GPU_TEXTURE0, GPU_FRAGMENT_PRIMARY_COLOR);
+                C3D_TexEnvFunc(env0, C3D_Both, GPU_MODULATE);
+
+                C3D_TexEnvSrc(env1, C3D_Both, GPU_PREVIOUS, GPU_FRAGMENT_SECONDARY_COLOR);
+                C3D_TexEnvFunc(env1, C3D_Both, GPU_ADD);
+            } else {
+                C3D_TexEnvSrc(env0, C3D_Both, GPU_TEXTURE0, GPU_FRAGMENT_PRIMARY_COLOR);
+                C3D_TexEnvFunc(env0, C3D_Both, GPU_MODULATE);
+            }
+
+            C3D_TexBind(0, texture);
+        } else {
+            if (mLightEnv.isToonShaded()) {
+                C3D_TexEnvSrc(env0, C3D_Both, GPU_FRAGMENT_PRIMARY_COLOR, GPU_FRAGMENT_SECONDARY_COLOR);
+                C3D_TexEnvFunc(env0, C3D_Both, GPU_ADD);
+            } else {
+                C3D_TexEnvSrc(env0, C3D_Both, GPU_FRAGMENT_PRIMARY_COLOR, GPU_FRAGMENT_SECONDARY_COLOR);
+                C3D_TexEnvFunc(env0, C3D_Both, GPU_MODULATE);
+            }
+            C3D_TexEnvInit(env1);
+        }
+        mBoundTexture = texture;
+    }
 
     ShaderProgram RenderTarget2D::program { std::span{ shader2d } };
     
@@ -31,9 +123,11 @@ namespace M3DS {
         .modelView = program.getUniformLocation("modelView")
     };
 
-    ScratchBuffer<Vertex2D, 1024 * 1024 / sizeof(Vertex2D), LinearAllocator<Vertex2D>> scratchBuffer {};
+    ScratchBuffer<unsigned char, 1024 * 1024, LinearAllocator<unsigned char>> scratchBuffer {};
 
-
+    std::span<const unsigned char> toCharSpan(const auto& val) noexcept {
+        return { reinterpret_cast<const unsigned char*>(std::addressof(val)), sizeof(val) };
+    }
     
     DrawEnvironment::DrawEnvironment() noexcept {
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -43,6 +137,7 @@ namespace M3DS {
         C3D_FrameEnd(0);
         scratchBuffer.swap();
     }
+
 
     RenderTarget::RenderTarget(const Screen screen, const bool stereoscopic3d) noexcept
         : mScreen(screen)
@@ -114,27 +209,28 @@ namespace M3DS {
     void RenderTarget::clear(const Colour colour, const ClearFlags flags) noexcept {
         const std::uint32_t c = colour.convertForFrameBuf();
 
-        if (mTargetLeft)
+        if (mTargetLeft) {
             C3D_RenderTargetClear(
                 mTargetLeft.get(),
                 static_cast<C3D_ClearBits>(flags),
                 c,
                 0
             );
-        if (mTargetRight)
+        }
+        if (mTargetRight) {
             C3D_RenderTargetClear(
                 mTargetRight.get(),
                 static_cast<C3D_ClearBits>(flags),
                 c,
                 0
             );
+        }
     }
 
     RenderTarget2D::RenderTarget2D(C3D_RenderTarget* target) noexcept : mTarget(target) {}
 
     RenderTarget2D::~RenderTarget2D() noexcept {
         disablePrimitive();
-        scratchBuffer.swap();
     }
 
     Vector2i RenderTarget2D::getSize() const {
@@ -158,11 +254,6 @@ namespace M3DS {
 
         mPrimitive = false;
         setTint(Colours::white);
-    }
-
-    void RenderTarget2D::primitiveSendVertex(const Vertex2D& vertex) noexcept {
-        if (Failure failure = scratchBuffer.emplace(vertex))
-            Debug::err(failure);
     }
 
     void RenderTarget2D::primitiveFlush() noexcept {
@@ -213,19 +304,18 @@ namespace M3DS {
 
         enablePrimitive();
         for (const auto& v : triangle)
-            primitiveSendVertex(v);
+            if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(v)))
+                Debug::terminate(failure);
     }
 
     void RenderTarget2D::draw(const Quad2D& quad, C3D_Tex* texture) noexcept {
         bind(texture);
 
         enablePrimitive();
-        primitiveSendVertex(quad[0]);
-        primitiveSendVertex(quad[1]);
-        primitiveSendVertex(quad[2]);
-        primitiveSendVertex(quad[1]);
-        primitiveSendVertex(quad[2]);
-        primitiveSendVertex(quad[3]);
+
+        for (const int i : { 0, 1, 2, 1, 2, 3 })
+            if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(quad[i])))
+                Debug::terminate(failure);
     }
 
     void RenderTarget2D::draw(const Mesh2D& mesh) noexcept {
@@ -341,8 +431,8 @@ namespace M3DS {
 
         const std::array<Vertex2D, 16> vertices {{
             { toVec3(topLeft), texcoords[0], style.colour },
-            { toVec3(topLeft + horizUnit), texcoords[1], style.colour},
-            {toVec3(topLeft + vertUnit), texcoords[2], style.colour },
+            { toVec3(topLeft + horizUnit), texcoords[1], style.colour },
+            { toVec3(topLeft + vertUnit), texcoords[2], style.colour },
             { toVec3(topLeft + vertUnit + horizUnit), texcoords[3], style.colour },
             { toVec3(topRight), texcoords[0], style.colour },
             { toVec3(topRight - horizUnit), texcoords[1], style.colour },
@@ -350,8 +440,8 @@ namespace M3DS {
             { toVec3(topRight + vertUnit - horizUnit), texcoords[3], style.colour },
 
             { toVec3(bottomLeft), texcoords[0], style.colour },
-            { toVec3(bottomLeft + horizUnit), texcoords[1], style.colour},
-            {toVec3(bottomLeft - vertUnit), texcoords[2], style.colour },
+            { toVec3(bottomLeft + horizUnit), texcoords[1], style.colour },
+            { toVec3(bottomLeft - vertUnit), texcoords[2], style.colour },
             { toVec3(bottomLeft - vertUnit + horizUnit), texcoords[3], style.colour },
             { toVec3(bottomRight), texcoords[0], style.colour },
             { toVec3(bottomRight - horizUnit), texcoords[1], style.colour },
@@ -359,77 +449,21 @@ namespace M3DS {
             { toVec3(bottomRight - vertUnit - horizUnit), texcoords[3], style.colour },
         }};
 
-        // Top Left Corner
-        primitiveSendVertex(vertices[0]);
-        primitiveSendVertex(vertices[1]);
-        primitiveSendVertex(vertices[2]);
-        primitiveSendVertex(vertices[2]);
-        primitiveSendVertex(vertices[1]);
-        primitiveSendVertex(vertices[3]);
+        for (const int i : {
+            0, 1, 2, 2, 1, 3,           // Top Left
+            4, 5, 6, 6, 5, 7,           // Top Right
+            8, 9, 10, 10, 9, 11,        // Bottom Left
+            12, 13, 14, 14, 13, 15,     // Bottom Right
+            1, 5, 3, 3, 5, 7,           // Top Middle
+            9, 13, 11, 11, 13, 15,      // Bottom Middle
+            2, 3, 10, 10, 3, 11,        // Left Middle
+            6, 7, 14, 14, 7, 15,        // Right Middle
+            3, 7, 11, 11, 7, 15         // Centre
+        }) {
+            if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(vertices[i])))
+                Debug::terminate(failure);
+        }
 
-        // Top Right Corner
-        primitiveSendVertex(vertices[4]);
-        primitiveSendVertex(vertices[5]);
-        primitiveSendVertex(vertices[6]);
-        primitiveSendVertex(vertices[6]);
-        primitiveSendVertex(vertices[5]);
-        primitiveSendVertex(vertices[7]);
-
-        // Bottom Left Corner
-        primitiveSendVertex(vertices[8]);
-        primitiveSendVertex(vertices[9]);
-        primitiveSendVertex(vertices[10]);
-        primitiveSendVertex(vertices[10]);
-        primitiveSendVertex(vertices[9]);
-        primitiveSendVertex(vertices[11]);
-
-        // Bottom Right Corner
-        primitiveSendVertex(vertices[12]);
-        primitiveSendVertex(vertices[13]);
-        primitiveSendVertex(vertices[14]);
-        primitiveSendVertex(vertices[14]);
-        primitiveSendVertex(vertices[13]);
-        primitiveSendVertex(vertices[15]);
-
-        // Top Bar
-        primitiveSendVertex(vertices[1]);
-        primitiveSendVertex(vertices[5]);
-        primitiveSendVertex(vertices[3]);
-        primitiveSendVertex(vertices[3]);
-        primitiveSendVertex(vertices[5]);
-        primitiveSendVertex(vertices[7]);
-
-        // Bottom Bar
-        primitiveSendVertex(vertices[9]);
-        primitiveSendVertex(vertices[13]);
-        primitiveSendVertex(vertices[11]);
-        primitiveSendVertex(vertices[11]);
-        primitiveSendVertex(vertices[13]);
-        primitiveSendVertex(vertices[15]);
-
-        // Left Bar
-        primitiveSendVertex(vertices[2]);
-        primitiveSendVertex(vertices[3]);
-        primitiveSendVertex(vertices[10]);
-        primitiveSendVertex(vertices[10]);
-        primitiveSendVertex(vertices[3]);
-        primitiveSendVertex(vertices[11]);
-
-        // Right Bar
-        primitiveSendVertex(vertices[6]);
-        primitiveSendVertex(vertices[7]);
-        primitiveSendVertex(vertices[14]);
-        primitiveSendVertex(vertices[14]);
-        primitiveSendVertex(vertices[7]);
-        primitiveSendVertex(vertices[15]);
-
-        // Centre
-        primitiveSendVertex(vertices[3]);
-        primitiveSendVertex(vertices[7]);
-        primitiveSendVertex(vertices[11]);
-        primitiveSendVertex(vertices[11]);
-        primitiveSendVertex(vertices[7]);
-        primitiveSendVertex(vertices[15]);
     }
 
     void RenderTarget2D::draw(const TextureStyle& style, const Transform2D& transform, const Vector2& boxSize) {
@@ -468,12 +502,9 @@ namespace M3DS {
             { toVec3(bottomRight), { uvs.right, uvs.bottom } },
         }};
 
-        primitiveSendVertex(vertices[0]);
-        primitiveSendVertex(vertices[1]);
-        primitiveSendVertex(vertices[2]);
-        primitiveSendVertex(vertices[2]);
-        primitiveSendVertex(vertices[1]);
-        primitiveSendVertex(vertices[3]);
+        for (const int i : { 0, 1, 2, 2, 1, 3 })
+            if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(vertices[i])))
+                Debug::terminate(failure);
     }
 
     void RenderTarget2D::drawRectSolid(const Transform2D& transform, Vector2 size, const Colour colour) {
@@ -532,6 +563,14 @@ namespace M3DS {
 
         mBoundTexture = nullptr;
 
+        mProjection = Matrix4x4::orthoTilt<false>(
+            0.0,
+            mTarget->screen == GFX_TOP ? GSP_SCREEN_HEIGHT_TOP : GSP_SCREEN_HEIGHT_BOTTOM,
+            240.0,
+            0.0,
+            0.0,
+            1.0
+        );
 		program.updateUniform4x4(uniforms.projection, mProjection);
     }
 
@@ -581,9 +620,10 @@ namespace M3DS {
         );
     }
 
-    RenderTarget3D::RenderTarget3D(C3D_RenderTarget* target, LightEnv& lightEnv) noexcept
+    RenderTarget3D::RenderTarget3D(C3D_RenderTarget* target, LightEnv& lightEnv, const WorldEnvironment3D& worldEnv) noexcept
         : mTarget(target)
         , mLightEnv(lightEnv)
+        , mWorldEnv(worldEnv)
     {}
 
     void RenderTarget3D::prepare(const float iod) noexcept {
@@ -607,6 +647,12 @@ namespace M3DS {
             iod,
             3.0f
         );
+        program.updateUniform4x4(uniforms.projection, mProjection);
+
+        mBoundTexture = nullptr;
+
+        C3D_TexEnvInit(C3D_GetTexEnv(0));
+        C3D_TexEnvInit(C3D_GetTexEnv(1));
 
         C3D_CullFace(GPU_CULL_BACK_CCW);
     }
@@ -616,13 +662,7 @@ namespace M3DS {
  		if (!mesh) return;
 
  		// Update the uniforms
-        program.updateUniform4x4(uniforms.projection, mProjection);
         program.updateUniform4x4(uniforms.modelView, mCameraInverse * meshInstance.getGlobalTransform());
-
- 		C3D_TexEnv* env = C3D_GetTexEnv(0);
- 		C3D_TexEnvInit(env);
-
- 		C3D_TexEnvInit(C3D_GetTexEnv(1));
 
         const std::span<const MeshInstance::BoneInstance> boneInstances = meshInstance.getBones();
         const std::span<const Mesh::Bone> bones = mesh->getBones();
@@ -643,34 +683,100 @@ namespace M3DS {
  			    }
  			}
 
- 			if (texture) {
- 				if (mLightEnv.isToonShaded()) {
- 					C3D_TexEnvSrc(env, C3D_RGB, GPU_TEXTURE0, GPU_FRAGMENT_SECONDARY_COLOR);
- 					C3D_TexEnvSrc(env, C3D_Alpha, GPU_TEXTURE0);
- 					C3D_TexEnvFunc(env, C3D_RGB, GPU_ADD_SIGNED);
- 					C3D_TexEnvFunc(env, C3D_Alpha, GPU_ADD);
- 				} else {
-				    C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, GPU_FRAGMENT_PRIMARY_COLOR);
- 					C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
- 				}
-
- 				C3D_TexBind(0, texture->getNative());
- 			} else {
- 				if (mLightEnv.isToonShaded()) {
- 					C3D_TexEnvSrc(env, C3D_Both, GPU_FRAGMENT_PRIMARY_COLOR, GPU_FRAGMENT_SECONDARY_COLOR);
- 					C3D_TexEnvFunc(env, C3D_Both, GPU_MODULATE);
- 				} else {
- 					C3D_TexEnvSrc(env, C3D_Both, GPU_FRAGMENT_PRIMARY_COLOR, GPU_FRAGMENT_SECONDARY_COLOR);
- 					C3D_TexEnvFunc(env, C3D_Both, GPU_ADD);
- 				}
- 			}
+ 		    bind(texture ? texture->getNative() : nullptr);
 
  			mLightEnv.material(material);
  			C3D_DrawArrays(GPU_TRIANGLES, 0, static_cast<int>(triangles.size() * 3));
  		}
     }
 
+    void RenderTarget3D::drawSkybox() noexcept {
+        if (mWorldEnv.skyboxTexture) {
+            assert(scratchBuffer.getCurrentSpan().empty());
+
+            program.updateUniform4x4(uniforms.modelView, mCameraInverse * Matrix4x4::fromTranslation(mCamera.getTranslation()));
+
+            for (const Mesh::Vertex& vtx : skyboxVertices) {
+                if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(vtx)))
+                    Debug::terminate(failure);
+            }
+
+            C3D_BufInfo* bufInfo = C3D_GetBufInfo();
+            BufInfo_Init(bufInfo);
+            BufInfo_Add(bufInfo, scratchBuffer.getCurrentSpan().data(), sizeof(Mesh::Vertex), 5, 0x43210);
+
+            bind(mWorldEnv.skyboxTexture.getNative());
+
+            mLightEnv.material(Material{
+                { 1.f, 1.f, 1.f },
+                {},
+                {},
+                {},
+                { 1.f, 1.f, 1.f }
+            });
+
+            C3D_DepthTest(false, GPU_ALWAYS, GPU_WRITE_COLOR);
+            C3D_DrawArrays(GPU_TRIANGLES, 0, skyboxVertices.size());
+            C3D_DepthTest(true, GPU_GREATER, GPU_WRITE_ALL);
+            scratchBuffer.startNewSpan();
+        }
+    }
+
+    void RenderTarget3D::drawSprite(
+        const SpriteSheet& spriteSheet,
+        const Matrix4x4& transform,
+        const std::uint32_t frame,
+        const float pixelSize,
+        const bool cullBack,
+        const bool billboard
+    ) noexcept {
+        assert(scratchBuffer.getCurrentSpan().empty());
+
+        const Vector2 halfSize = spriteSheet.getFrameSize() / 2.f * pixelSize;
+        const UVs& uvs = spriteSheet.getFrame(frame);
+
+        if (billboard) {
+            program.updateUniform4x4(uniforms.modelView, Matrix4x4::fromTranslation((mCameraInverse * transform).getTranslation()));
+        } else {
+            program.updateUniform4x4(uniforms.modelView, mCameraInverse * transform);
+        }
+
+        const std::array<Mesh::Vertex, 4> corners {{
+            { { halfSize.x, halfSize.y, 0.f }, { uvs.right,  uvs.top }, { 0.f, 0.f, -1.f } },
+            { { -halfSize.x, halfSize.y, 0.f }, { uvs.left, uvs.top }, { 0.f, 0.f, -1.f } },
+            { { halfSize.x, -halfSize.y, 0.f }, { uvs.right,  uvs.bottom }, { 0.f, 0.f, -1.f } },
+            { { -halfSize.x, -halfSize.y, 0.f }, { uvs.left, uvs.bottom }, { 0.f, 0.f, -1.f } },
+        }};
+
+        for (const int i : { 0, 1, 2, 2, 1, 3 }) {
+            if (const Failure failure = scratchBuffer.emplaceSpan(toCharSpan(corners[i])))
+                Debug::terminate(failure);
+        }
+
+        bind(spriteSheet.getTexture().getNative());
+
+        mLightEnv.material(Material{
+            { 0.25f, 0.25f, 0.25f },
+            { 1.f, 1.f, 1.f },
+            {},
+            {},
+            {}
+        });
+
+        C3D_BufInfo* bufInfo = C3D_GetBufInfo();
+        BufInfo_Init(bufInfo);
+        BufInfo_Add(bufInfo, scratchBuffer.getCurrentSpan().data(), sizeof(Mesh::Vertex), 5, 0x43210);
+
+        if (!cullBack)
+            C3D_CullFace(GPU_CULL_NONE);
+        C3D_DrawArrays(GPU_TRIANGLES, 0, 6);
+        if (!cullBack)
+            C3D_CullFace(GPU_CULL_BACK_CCW);
+        scratchBuffer.startNewSpan();
+    }
+
     void RenderTarget3D::setCameraPos(const Matrix4x4& transform) noexcept {
+        mCamera = transform;
         mCameraInverse = transform.inverse();
     }
 }

@@ -1,4 +1,4 @@
-#include <m3ds/types/Style.hpp>
+#include <m3ds/render/Style.hpp>
 
 namespace M3DS {
     constexpr std::array stretchPanelTextureData = std::to_array<unsigned char>({

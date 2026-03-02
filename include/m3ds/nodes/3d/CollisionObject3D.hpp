@@ -2,7 +2,7 @@
 
 #include <m3ds/nodes/3d/Node3D.hpp>
 
-#include "m3ds/lib/SPhys/3D/PhysicsServer3D.hpp"
+#include <m3ds/lib/SPhys/3D/PhysicsServer3D.hpp>
 
 namespace M3DS {
     class CollisionObject3D : public Node3D {

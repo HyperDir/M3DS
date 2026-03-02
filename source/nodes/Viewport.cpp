@@ -121,21 +121,23 @@ namespace M3DS {
         {
             C3D_RenderTarget* lTarget = mTarget.getLeft();
             C3D_FrameDrawOn(lTarget);
-            RenderTarget3D targetLeft { lTarget, mLightEnv };
+            RenderTarget3D targetLeft { lTarget, mLightEnv, mWorldEnv3D };
 
-            targetLeft.prepare(-iod);
             if (mCamera3D)
                 targetLeft.setCameraPos(mCamera3D->getGlobalTransform());
+            targetLeft.prepare(-iod);
+            targetLeft.drawSkybox();
 
             draw(targetLeft);
         }
 
         if (C3D_RenderTarget* rTarget = mTarget.getRight(); rTarget && iod > 0) {
             C3D_FrameDrawOn(rTarget);
-            RenderTarget3D targetRight { rTarget, mLightEnv };
-            targetRight.prepare(iod);
+            RenderTarget3D targetRight { rTarget, mLightEnv, mWorldEnv3D };
             if (mCamera3D)
                 targetRight.setCameraPos(mCamera3D->getGlobalTransform());
+            targetRight.prepare(iod);
+            targetRight.drawSkybox();
 
             draw(targetRight);
         }

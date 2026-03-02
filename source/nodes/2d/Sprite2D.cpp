@@ -52,7 +52,8 @@ namespace M3DS {
 
     REGISTER_MEMBERS(
         Sprite2D,
-        // MEMBER(texture),
+
+        MEMBER(spritesheet),
         MEMBER(frame),
         MEMBER(centre)
     );
